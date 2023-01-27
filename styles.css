@@ -1,0 +1,9 @@
+img.reaction-img {
+    width: auto;
+    height: 40px;
+}
+
+.reaction-item {
+    width: 100%;
+    margin: 5px 0;
+}

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/reactforum/db" VERSION="20220117" COMMENT="XMLDB file for Moodle local/reactforum"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="reactforum_metadata" COMMENT="Type of reaction">
+      <FIELDS>
+        <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="forum" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="discussion" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="reactiontype" SEQUENCE="false" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="reactionallreplies" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0"/>
+        <FIELD NAME="delayedcounter" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="forum" TYPE="foreign" FIELDS="forum" REFTABLE="forum" REFFIELDS="id" UNIQUE="true"/>
+        <KEY NAME="discussion" TYPE="foreign" FIELDS="discussion" REFTABLE="forum_discussions" REFFIELDS="id" UNIQUE="true"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="reactforum_reactions" COMMENT="All reactions in each discussion">
+      <FIELDS>
+        <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="forum" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="discussion" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="reaction" SEQUENCE="false" TYPE="char" LENGTH="255" NOTNULL="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="forum" TYPE="foreign" FIELDS="forum" REFTABLE="forum" REFFIELDS="id"/>
+        <KEY NAME="discussion" TYPE="foreign" FIELDS="discussion" REFTABLE="forum_discussions" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="forum" UNIQUE="false" FIELDS="forum"/>
+        <INDEX NAME="discussion" UNIQUE="false" FIELDS="discussion"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="reactforum_user_reactions" COMMENT="All reacted records from each user in every posts">
+      <FIELDS>
+        <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="user" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="post" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="reaction" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="post" TYPE="foreign" FIELDS="post" REFTABLE="forum_posts" REFFIELDS="id"/>
+        <KEY NAME="reaction" TYPE="foreign" FIELDS="reaction" REFTABLE="reactforum_reactions" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="user" UNIQUE="false" FIELDS="user"/>
+        <INDEX NAME="post" UNIQUE="false" FIELDS="post"/>
+        <INDEX NAME="reaction" UNIQUE="false" FIELDS="reaction"/>
+      </INDEXES>s
+    </TABLE>
+  </TABLES>
+</XMLDB>
