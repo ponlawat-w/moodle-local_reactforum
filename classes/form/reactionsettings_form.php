@@ -67,7 +67,7 @@ class reactionsettings_form extends \moodleform
 
         $mform->addElement('checkbox', 'reactionallreplies', get_string('reactions_allreplies', 'local_reactforum'));
         $mform->addHelpButton('reactionallreplies', 'reactions_allreplies', 'local_reactforum');
-        $mform->setDefault('reactionallreplies', $metadata ? ($metadata->reactionallreplies ? true : false) : true);
+        $mform->setDefault('reactionallreplies', $metadata ? ($metadata->reactionallreplies ? true : false) : false);
 
         $mform->addElement('checkbox', 'delayedcounter', get_string('reactions_delayedcounter', 'local_reactforum'));
         $mform->addHelpButton('delayedcounter', 'reactions_delayedcounter', 'local_reactforum');
