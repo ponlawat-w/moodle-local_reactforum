@@ -1,18 +1,7 @@
-require(['jquery'], $ => {
-    const getdiscussionid = () => {
-        const $scripts = $('script');
-        for (const script of $scripts) {
-            const $script = $(script);
-            const src = $script.attr('src');
-            if (!/^(.*)\/local\/reactforum\/script.js(.*)$/g.test(src)) {
-                continue;
-            }
-            return new URL(src).searchParams.get('d');
-        }
-        return null;
-    };
+import $ from 'jquery';
 
-    const getreactionsdata = discussionid => new Promise((resolve, reject) => {
+export const init = (discussionid) => {
+    const getreactionsdata = () => new Promise((resolve, reject) => {
         try {
             $.get(`${M.cfg.wwwroot}/local/reactforum/reactionsdata.php?id=${discussionid}`, response => {
                 if (response && response.metadata) {
@@ -66,10 +55,12 @@ require(['jquery'], $ => {
     const getcountertext = (reactiontype, count) => reactiontype === 'text' ? `- ${count}` : count;
 
     const applybutton = (metadata, $button, postreactiondata) => {
-        $button.removeClass('btn-primary btn-default');
-        $button.addClass(postreactiondata.reacted ? 'btn-primary' : 'btn-default');
+        $button.removeClass('btn-primary btn-outline-primary');
+        $button.addClass(postreactiondata.reacted ? 'btn-primary' : 'btn-outline-primary');
         const $counter = $button.find('.reaction-counter');
-        $counter.html(postreactiondata.count !== null ? getcountertext(metadata.reactiontype, postreactiondata.count.toString()) : '');
+        $counter.html(postreactiondata.count !== null ?
+            getcountertext(metadata.reactiontype, postreactiondata.count.toString())
+            : '');
         if (!parseInt(metadata.delayedcounter) || postreactiondata.count !== null) {
             $counter.show();
         } else {
@@ -100,14 +91,18 @@ require(['jquery'], $ => {
             if (reactionsdata.metadata.reactiontype === 'text') {
                 $button.html(reaction.reaction);
             } else if (reactionsdata.metadata.reactiontype === 'image') {
-                $button.html($('<img>').addClass('reaction-img').attr('src', `${M.cfg.wwwroot}/local/reactforum/image.php?id=${reaction.id}`));
+                $button.html($('<img>')
+                    .addClass('reaction-img')
+                    .attr('src', `${M.cfg.wwwroot}/local/reactforum/image.php?id=${reaction.id}`))
+                    .attr('alt', reaction.reaction)
+                    .attr('title', reaction.reaction);
             } else {
                 continue;
             }
             const $counter = $('<span>');
             $counter.addClass('reaction-counter ml-1');
             $button.append($counter);
-            $button.click(function() {
+            $button.on('click', function() {
                 react(reactionsdata.metadata, $(this), $reactionsarea);
             });
             applybutton(reactionsdata.metadata, $button, postreactiondata);
@@ -116,7 +111,7 @@ require(['jquery'], $ => {
         $appendedelement.append($reactionsarea);
     };
 
-    const addmanagebutton = discussionid => {
+    const addmanagebutton = () => {
         const $firstpost = $('.firstpost[data-content="forum-post"]');
         if (!$firstpost.length) {
             return;
@@ -134,16 +129,14 @@ require(['jquery'], $ => {
         );
     };
 
-    $(document).ready(() => {
-        const discussionid = getdiscussionid();
-
-        const init = async() => {
-            const reactionsdata = await getreactionsdata(discussionid);
+    $(() => {
+        const initialise = async() => {
+            const reactionsdata = await getreactionsdata();
             if (!reactionsdata) {
                 return;
             }
             if (reactionsdata.canmanage) {
-                addmanagebutton(discussionid);
+                addmanagebutton();
             }
             const $forumposts = $('.forumpost');
             for (const forumpost of $forumposts) {
@@ -151,6 +144,6 @@ require(['jquery'], $ => {
             }
         };
 
-        init();
+        initialise();
     });
-});
+};

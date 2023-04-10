@@ -2,7 +2,7 @@
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 $reactionid = required_param('id', PARAM_INT);
-$reaction = $DB->get_record('reactforum_reactions', ['id' => $reactionid], '*', MUST_EXIST);
+$reaction = $DB->get_record('reactforum_buttons', ['id' => $reactionid], '*', MUST_EXIST);
 $metadata = $DB->get_record('reactforum_metadata', ['forum' => $reaction->forum, 'discussion' => $reaction->discussion]);
 $forum = $DB->get_record('forum', ['id' => $reaction->forum]);
 $course = $DB->get_record('course', ['id' => $forum->course], '*', MUST_EXIST);

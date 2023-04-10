@@ -10,6 +10,9 @@ if (!$forumid && !$discussionid) {
     throw new moodle_exception('Invalid parameters');
 }
 
+/**
+ * @var \moodle_page $PAGE
+ */
 $PAGE->set_url('/local/reactforum/managereactions.php', ['f' => $forumid, 'd' => $discussionid]);
 
 $discussion = $discussionid ? $DB->get_record('forum_discussions', ['id' => $discussionid], '*', MUST_EXIST) : null;
@@ -64,7 +67,20 @@ if ($discussion) {
     $PAGE->navbar->add($discussion->name, new moodle_url('/mod/forum/discuss.php', ['d' => $discussion->id]));
 }
 
-local_reactforum_initiatedependencies($PAGE);
+$PAGE->requires->css('/local/reactforum/styles.css');
+$PAGE->requires->strings_for_js([
+    'reactionstype_change_confirmation',
+    'reactions_add',
+    'reactions_changeimage',
+    'reactions_selectfile',
+    'reactions_cancel',
+    'reactions_delete',
+    'reactions_delete_confirmation',
+    'reactions_reupload',
+    'description'
+], 'local_reactforum');
+$reactionsdata = local_reactforum_getreactionsjson($forum->id, $discussion ? $discussion->id : null, isset($forummetadata) ? $forummetadata : null);
+$PAGE->requires->js_call_amd('local_reactforum/managereactions', 'init', [$reactionsdata]);
 
 echo $OUTPUT->header();
 $form->display();

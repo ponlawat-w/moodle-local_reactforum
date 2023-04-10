@@ -6,7 +6,7 @@ require_once(__DIR__ . '/lib.php');
 $postid = required_param('post', PARAM_INT);
 $reactionid = required_param('reaction', PARAM_INT);
 $post = $DB->get_record('forum_posts', ['id' => $postid], '*', MUST_EXIST);
-$reaction = $DB->get_record('reactforum_reactions', ['id' => $reactionid], '*', MUST_EXIST);
+$reaction = $DB->get_record('reactforum_buttons', ['id' => $reactionid], '*', MUST_EXIST);
 $discussion = $DB->get_record('forum_discussions', ['id' => $post->discussion], '*', MUST_EXIST);
 $forum = $DB->get_record('forum', ['id' => $discussion->forum], '*', MUST_EXIST);
 $course = $DB->get_record('course', ['id' => $forum->course], '*', MUST_EXIST);
@@ -33,16 +33,16 @@ if (!$reactionmetadata->reactionallreplies && $discussion->firstpost != $post->i
     throw new moodle_exception('Cannot react to replies');
 }
 
-$userreaction = $DB->get_record('reactforum_user_reactions', ['post' => $post->id, 'user' => $USER->id]);
+$userreaction = $DB->get_record('reactforum_reacted', ['post' => $post->id, 'userid' => $USER->id]);
 if (!$userreaction) {
     $userreaction = new stdClass();
     $userreaction->post = $post->id;
     $userreaction->reaction = $reaction->id;
-    $userreaction->user = $USER->id;
-    if (!$DB->delete_records('reactforum_user_reactions', ['post' => $post->id, 'user' => $USER->id])) {
+    $userreaction->userid = $USER->id;
+    if (!$DB->delete_records('reactforum_reacted', ['post' => $post->id, 'userid' => $USER->id])) {
         throw new moodle_exception('Cannot clear reactions before reacting');
     }
-    if (!$DB->insert_record('reactforum_user_reactions', $userreaction)) {
+    if (!$DB->insert_record('reactforum_reacted', $userreaction)) {
         throw new moodle_exception('Cannot react');
     }
     echo json_encode(local_reactforum_getpostreactionsdata($reactionmetadata, $post->id));
@@ -52,14 +52,14 @@ if ($reactionmetadata->delayedcounter) {
     throw new moodle_exception('Cannot change the reaction in a delayed counter type');
 }
 if ($userreaction->reaction == $reaction->id) {
-    if (!$DB->delete_records('reactforum_user_reactions', ['post' => $post->id, 'user' => $USER->id])) {
+    if (!$DB->delete_records('reactforum_reacted', ['post' => $post->id, 'userid' => $USER->id])) {
         throw new moodle_exception('Cannot clear reactions');
     }
     echo json_encode(local_reactforum_getpostreactionsdata($reactionmetadata, $post->id));
     exit;
 }
 $userreaction->reaction = $reaction->id;
-if (!$DB->update_record('reactforum_user_reactions', $userreaction)) {
+if (!$DB->update_record('reactforum_reacted', $userreaction)) {
     throw new moodle_exception('Cannot update reaction');
 }
 echo json_encode(local_reactforum_getpostreactionsdata($reactionmetadata, $post->id));

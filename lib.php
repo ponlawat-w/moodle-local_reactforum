@@ -31,22 +31,6 @@ function local_reactforum_extend_settings_navigation($settingsnav, $context) {
     }
 }
 
-function local_reactforum_initiatedependencies($PAGE) {
-    $PAGE->requires->css('/local/reactforum/styles.css');
-    $PAGE->requires->jquery();
-    $PAGE->requires->js('/local/reactforum/formscript.js');
-    $PAGE->requires->strings_for_js([
-        'reactionstype_change_confirmation',
-        'reactions_add',
-        'reactions_changeimage',
-        'reactions_selectfile',
-        'reactions_cancel',
-        'reactions_delete',
-        'reactions_delete_confirmation',
-        'reactions_reupload'
-    ], 'local_reactforum');
-}
-
 function local_reactforum_caneditdiscussion($discussion, $modcontext) {
     global $USER;
     $forummetadata = local_reactforum_getreactionmetadata($discussion->forum);
@@ -65,6 +49,27 @@ function local_reactforum_getreactionmetadata($forumid = null, $discussionid = n
         return $DB->get_record('reactforum_metadata', ['forum' => $forumid, 'discussion' => null]);
     }
     throw new moodle_exception('Invalid arguments');
+}
+
+function local_reactforum_getreactionsjson($forumid, $discussionid, $metadata = null) {
+    global $DB;
+    if (!$metadata) {
+        $metadata = local_reactforum_getreactionmetadata($forumid, $discussionid);
+    }
+    if (!$metadata) {
+        return json_encode(null);
+    }
+    $reactions = $DB->get_records('reactforum_buttons', ['forum' => $forumid, 'discussion' => $discussionid]);
+
+    $values = [];
+    foreach ($reactions as $reaction) {
+        array_push($values, ['id' => $reaction->id, 'value' => $reaction->reaction]);
+    }
+
+    return json_encode([
+        'type' => $metadata->reactiontype,
+        'reactions' => $values
+    ]);
 }
 
 function local_reactforum_movedrafttotemp($fs, $drafturl) {
@@ -153,7 +158,7 @@ function local_reactforum_getmodcontextfromforumid($forumid) {
 function local_reactforum_removereaction($reactionid) {
     global $DB;
 
-    $reaction = $DB->get_record('reactforum_reactions', ['id' => $reactionid]);
+    $reaction = $DB->get_record('reactforum_buttons', ['id' => $reactionid]);
     if (!$reaction) {
         throw new moodle_exception('Invalid reaction ID');
     }
@@ -167,11 +172,11 @@ function local_reactforum_removereaction($reactionid) {
         $file->delete();
     }
 
-    if (!$DB->delete_records('reactforum_user_reactions', ['reaction' => $reactionid])) {
+    if (!$DB->delete_records('reactforum_reacted', ['reaction' => $reactionid])) {
         return false;
     }
 
-    if (!$DB->delete_records('reactforum_reactions', ['id' => $reactionid])) {
+    if (!$DB->delete_records('reactforum_buttons', ['id' => $reactionid])) {
         return false;
     }
 
@@ -181,9 +186,9 @@ function local_reactforum_removereaction($reactionid) {
 function local_reactforum_getpostreactiondata($metadata, $postid, $reactionid, $reactedpost, $postuser) {
     global $DB, $USER;
     $result = new stdClass();
-    $result->reacted = $DB->count_records('reactforum_user_reactions', ['post' => $postid, 'reaction' => $reactionid, 'user' => $USER->id]) > 0;
+    $result->reacted = $DB->count_records('reactforum_reacted', ['post' => $postid, 'reaction' => $reactionid, 'userid' => $USER->id]) > 0;
     $result->count = !$metadata->delayedcounter || $reactedpost || $postuser == $USER->id
-        ? $DB->count_records('reactforum_user_reactions', ['post' => $postid, 'reaction' => $reactionid])
+        ? $DB->count_records('reactforum_reacted', ['post' => $postid, 'reaction' => $reactionid])
         : null;
     $result->enabled = ($postuser != $USER->id) && (!$metadata->delayedcounter || ($metadata->delayedcounter && !$reactedpost));
     return $result;
@@ -191,12 +196,12 @@ function local_reactforum_getpostreactiondata($metadata, $postid, $reactionid, $
 
 function local_reactforum_getpostreactionsdata($metadata, $postid) {
     global $DB, $USER;
-    $reactions = $DB->get_records('reactforum_reactions', ['forum' => $metadata->forum, 'discussion' => $metadata->discussion]);
+    $reactions = $DB->get_records('reactforum_buttons', ['forum' => $metadata->forum, 'discussion' => $metadata->discussion]);
     $post = $DB->get_record('forum_posts', ['id' => $postid]);
     if (!$metadata->reactionallreplies && $post->parent) {
         return [];
     }
-    $reactedpost = $DB->count_records('reactforum_user_reactions', ['post' => $post->id, 'user' => $USER->id]) > 0;
+    $reactedpost = $DB->count_records('reactforum_reacted', ['post' => $post->id, 'userid' => $USER->id]) > 0;
     $results = [];
     foreach ($reactions as $reaction) {
         $results[$reaction->id] = local_reactforum_getpostreactiondata($metadata, $postid, $reaction->id, $reactedpost, $post->userid);
@@ -219,8 +224,8 @@ function local_reactforum_getdiscussionreactionsdata($discussionid) {
         return null;
     }
     $result->reactions = $result->metadata->discussion
-        ? array_values($DB->get_records('reactforum_reactions', ['discussion' => $discussion->id]))
-        : array_values($DB->get_records('reactforum_reactions', ['forum' => $discussion->forum]));
+        ? array_values($DB->get_records('reactforum_buttons', ['discussion' => $discussion->id]))
+        : array_values($DB->get_records('reactforum_buttons', ['forum' => $discussion->forum]));
     $result->posts = [];
     $posts = $DB->get_records('forum_posts', ['discussion' => $discussionid]);
     foreach ($posts as $post) {
@@ -233,7 +238,11 @@ function local_reactforum_getdiscussionreactionsdata($discussionid) {
 }
 
 function local_reactforum_initreactions() {
+    /**
+     * @var \moodle_page $PAGE
+     */
     global $PAGE;
+    $PAGE->requires->css('/local/reactforum/styles.css');
     $PAGE->requires->strings_for_js(['reactions'], 'local_reactforum');
-    $PAGE->requires->js('/local/reactforum/script.js?d=' . required_param('d', PARAM_INT));
+    $PAGE->requires->js_call_amd('local_reactforum/reactions', 'init', [required_param('d', PARAM_INT)]);
 }

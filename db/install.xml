@@ -19,7 +19,7 @@
         <KEY NAME="discussion" TYPE="foreign" FIELDS="discussion" REFTABLE="forum_discussions" REFFIELDS="id" UNIQUE="true"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="reactforum_reactions" COMMENT="All reactions in each discussion">
+    <TABLE NAME="reactforum_buttons" COMMENT="All reaction buttons in each forum or discussion">
       <FIELDS>
         <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
         <FIELD NAME="forum" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false"/>
@@ -36,10 +36,10 @@
         <INDEX NAME="discussion" UNIQUE="false" FIELDS="discussion"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="reactforum_user_reactions" COMMENT="All reacted records from each user in every posts">
+    <TABLE NAME="reactforum_reacted" COMMENT="All reacted records from each user in every posts">
       <FIELDS>
         <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
-        <FIELD NAME="user" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="userid" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="post" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="reaction" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
       </FIELDS>
@@ -49,7 +49,7 @@
         <KEY NAME="reaction" TYPE="foreign" FIELDS="reaction" REFTABLE="reactforum_reactions" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
-        <INDEX NAME="user" UNIQUE="false" FIELDS="user"/>
+        <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
         <INDEX NAME="post" UNIQUE="false" FIELDS="post"/>
         <INDEX NAME="reaction" UNIQUE="false" FIELDS="reaction"/>
       </INDEXES>s

@@ -24,27 +24,6 @@ class reactionsettings_form extends \moodleform
         parent::__construct();
     }
 
-    private function getcurrentreactionsjson($metadata = null) {
-        global $DB;
-        if (!$metadata) {
-            $metadata = local_reactforum_getreactionmetadata($this->forumid, $this->discussionid);
-        }
-        if (!$metadata) {
-            return json_encode(null);
-        }
-        $reactions = $DB->get_records('reactforum_reactions', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
-
-        $values = [];
-        foreach ($reactions as $reaction) {
-            array_push($values, ['id' => $reaction->id, 'value' => $reaction->reaction]);
-        }
-
-        return json_encode([
-            'type' => $metadata->reactiontype,
-            'reactions' => $values
-        ]);
-    }
-
     public function definition() {
         $mform = $this->_form;
 
@@ -79,10 +58,6 @@ class reactionsettings_form extends \moodleform
         $mform->addElement('hidden', 'd');
         $mform->setDefault('d', $this->discussionid);
         $mform->setType('d', PARAM_INT);
-
-        $mform->addElement('hidden', 'currentreactions');
-        $mform->setDefault('currentreactions', $this->getcurrentreactionsjson($metadata));
-        $mform->setType('currentreactions', PARAM_TEXT);
 
         $this->add_action_buttons(true);
     }
@@ -121,14 +96,14 @@ class reactionsettings_form extends \moodleform
         $currentmetadata = local_reactforum_getreactionmetadata($this->forumid, $this->discussionid);
 
         if ($currentmetadata && $data->reactiontype != $currentmetadata->reactiontype) {
-            $reactions = $DB->get_records('reactforum_reactions', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
+            $reactions = $DB->get_records('reactforum_buttons', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
             foreach ($reactions as $reaction) {
                 local_reactforum_removereaction($reaction->id);
             }
             $DB->delete_records('reactforum_metadata', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
             
             if (!$this->discussionid) {
-                $discussionreactions = $DB->get_records('reactforum_reactions', ['forum' => $this->forumid]);
+                $discussionreactions = $DB->get_records('reactforum_buttons', ['forum' => $this->forumid]);
                 foreach ($discussionreactions as $discussionreaction) {
                     local_reactforum_removereaction($discussionreaction->id);
                 }
@@ -142,22 +117,27 @@ class reactionsettings_form extends \moodleform
 
         if (isset($_POST['reactions']) && isset($_POST['reactions']['new'])) {
             if ($data->reactiontype == 'text') {
-                foreach ($_POST['reactions']['new'] ?? [] as $reactiontxt) {
+                foreach ($_POST['reactions']['new'] as $reactiontxt) {
                     $reaction = new stdClass();
                     $reaction->forum = $this->forumid;
                     $reaction->discussion = $this->discussionid;
                     $reaction->reaction = $reactiontxt;
-                    if (!$DB->insert_record('reactforum_reactions', $reaction)) {
+                    if (!$DB->insert_record('reactforum_buttons', $reaction)) {
                         throw new moodle_exception('Cannot create reaction');
                     }
                 }
             } else if ($data->reactiontype == 'image') {
-                foreach ($_POST['reactions']['new'] ?? [] as $fileid) {
+                foreach ($_POST['reactions']['new'] as $fileid) {
+                    $description = isset($_POST['reactions']['desc'])
+                        && isset($_POST['reactions']['desc']['new'])
+                        && isset($_POST['reactions']['desc']['new'][$fileid])
+                            ? $_POST['reactions']['desc']['new'][$fileid] : '';
+
                     $reaction = new stdClass();
                     $reaction->forum = $this->forumid;
                     $reaction->discussion = $this->discussionid;
-                    $reaction->reaction = '';
-                    $reactionid = $DB->insert_record('reactforum_reactions', $reaction);
+                    $reaction->reaction = $description;
+                    $reactionid = $DB->insert_record('reactforum_buttons', $reaction);
                     if (!$reactionid) {
                         throw new moodle_exception('Cannot create reaction');
                     }
@@ -177,12 +157,20 @@ class reactionsettings_form extends \moodleform
                     $reactionobj = new stdClass();
                     $reactionobj->id = $reactionid;
                     $reactionobj->reaction = $reaction;
-                    $DB->update_record('reactforum_reactions', $reactionobj);
+                    $DB->update_record('reactforum_buttons', $reactionobj);
                 }
             } else if ($data->reactiontype == 'image') {
                 foreach ($_POST['reactions']['edit'] as $reactionid => $filetempid) {
                     if ($filetempid > 0) {
                         local_reactforum_savetemp($fs, $modcontext->id, $fs->get_file_by_id($filetempid), $reactionid);
+                    }
+                }
+                if (isset($_POST['reactions']['desc']) && isset($_POST['reactions']['desc']['edit'])) {
+                    foreach ($_POST['reactions']['desc']['edit'] as $reactionid => $newdescription) {
+                        $reactionobj = new stdClass();
+                        $reactionobj->id = $reactionid;
+                        $reactionobj->reaction = $newdescription;
+                        $DB->update_record('reactforum_buttons', $reactionobj);
                     }
                 }
             }
@@ -193,7 +181,7 @@ class reactionsettings_form extends \moodleform
             }
         }
         if ($data->reactiontype == 'none') {
-            $reactions = $DB->get_records('reactforum_reactions', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
+            $reactions = $DB->get_records('reactforum_buttons', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
             foreach ($reactions as $reaction) {
                 local_reactforum_removereaction($reaction->id);
             }
