@@ -21,6 +21,9 @@ $string['reactions_allreplies_help'] = 'If this option is checked, reaction butt
 $string['reactions_delayedcounter'] = 'Delayed counter visibility';
 $string['reactions_delayedcounter_help'] = 'If enabled, the counter on the buttons will not be displayed to the students until they click a button.';
 
+$string['reactions_changeable'] = 'Allow changing reactions';
+$string['reactions_changeable_help'] = 'If enabled, users can undo or change their reaction, otherwise they will be able to react only once per post.';
+
 $string['reactionsbuttons'] = 'Reaction Buttons';
 $string['reactions_add'] = 'Add';
 $string['reactions_changeimage'] = 'Change Image';
