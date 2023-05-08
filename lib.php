@@ -190,7 +190,7 @@ function local_reactforum_getpostreactiondata($metadata, $postid, $reactionid, $
     $result->count = !$metadata->delayedcounter || $reactedpost || $postuser == $USER->id
         ? $DB->count_records('reactforum_reacted', ['post' => $postid, 'reaction' => $reactionid])
         : null;
-    $result->enabled = ($postuser != $USER->id) && (!$metadata->delayedcounter || ($metadata->delayedcounter && !$reactedpost));
+    $result->enabled = ($postuser != $USER->id) && ($metadata->changeable || (!$metadata->changeable && !$reactedpost));
     return $result;
 }
 

@@ -48,7 +48,7 @@ if (!$userreaction) {
     echo json_encode(local_reactforum_getpostreactionsdata($reactionmetadata, $post->id));
     exit;
 }
-if ($reactionmetadata->delayedcounter) {
+if (!$reactionmetadata->changeable) {
     throw new moodle_exception('Cannot change the reaction in a delayed counter type');
 }
 if ($userreaction->reaction == $reaction->id) {

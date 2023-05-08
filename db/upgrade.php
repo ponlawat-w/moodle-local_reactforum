@@ -35,4 +35,14 @@ function xmldb_local_reactforum_upgrade($oldversion) {
 
         upgrade_plugin_savepoint(true, 2023041000, 'local', 'reactforum');
     }
+
+    if ($oldversion < 2023050801) {
+        $table = new xmldb_table('reactforum_metadata');
+        $field = new xmldb_field('changeable', XMLDB_TYPE_INTEGER, '10', null, null, null, 1, 'delayedcounter');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2023050801, 'local', 'reactforum');
+    }
 }

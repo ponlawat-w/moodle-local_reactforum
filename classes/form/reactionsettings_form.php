@@ -52,6 +52,10 @@ class reactionsettings_form extends \moodleform
         $mform->addHelpButton('delayedcounter', 'reactions_delayedcounter', 'local_reactforum');
         $mform->setDefault('delayedcounter', $metadata && $metadata->delayedcounter ? true : false);
 
+        $mform->addElement('checkbox', 'changeable', get_string('reactions_changeable', 'local_reactforum'));
+        $mform->addHelpButton('changeable', 'reactions_changeable', 'local_reactforum');
+        $mform->setDefault('changeable', $metadata ? ($metadata->changeable ? true : false) : true);
+
         $mform->addElement('hidden', 'f');
         $mform->setDefault('f', $this->forumid);
         $mform->setType('f', PARAM_INT);
@@ -70,6 +74,7 @@ class reactionsettings_form extends \moodleform
             $metadata->reactiontype = $data->reactiontype;
             $metadata->reactionallreplies = isset($data->reactionallreplies) ? $data->reactionallreplies : 0;
             $metadata->delayedcounter = isset($data->delayedcounter) ? $data->delayedcounter : 0;
+            $metadata->changeable = isset($data->changeable) ? $data->changeable : 0;
             if (!$DB->update_record('reactforum_metadata', $metadata)) {
                 throw new moodle_exception('Cannot update reaction type entry');
             }
@@ -81,6 +86,7 @@ class reactionsettings_form extends \moodleform
         $metadata->reactiontype = $data->reactiontype;
         $metadata->reactionallreplies = $data->reactionallreplies ?? 0;
         $metadata->delayedcounter = $data->delayedcounter ?? 0;
+        $metadata->changeable = $data->changeable ?? 0;
         if (!$DB->insert_record('reactforum_metadata', $metadata)) {
             throw new moodle_exception('Cannot add reaction type entry');
         }
