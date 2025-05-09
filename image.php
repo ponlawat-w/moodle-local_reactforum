@@ -28,8 +28,8 @@ if (!count($files)) {
 }
 session_write_close();
 foreach ($files as $file) if($file->is_valid_image()) {
-    header("Content-type: " . $file->get_mimetype());
-    header("filename=" . $file->get_filename());
+    header('Content-Type: "' . $file->get_mimetype() . '"');
+    header('Content-Disposition: inline; filename="' . $file->get_filename() . '"');
     echo $file->get_content();
     exit;
 }
