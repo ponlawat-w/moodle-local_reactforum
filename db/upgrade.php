@@ -45,4 +45,6 @@ function xmldb_local_reactforum_upgrade($oldversion) {
 
         upgrade_plugin_savepoint(true, 2023050801, 'local', 'reactforum');
     }
+
+    return true;
 }
