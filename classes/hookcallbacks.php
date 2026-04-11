@@ -15,33 +15,38 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * local_reactforum database upgrade steps.
+ * Hook callbacks for local_reactforum.
  *
  * @package     local_reactforum
  * @copyright   2026 Ponlawat Weerapanpisit <ponlawat_w@outlook.co.th>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_reactforum;
+
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/../lib.php');
+
 /**
- * Upgrade steps for local_reactforum.
- *
- * @param int $oldversion
- * @return bool
+ * Hook callbacks
  */
-function xmldb_local_reactforum_upgrade($oldversion) {
-    global $DB;
-
-    $dbman = $DB->get_manager();
-
-    if ($oldversion < 2023050801) {
-        $table = new xmldb_table('reactforum_metadata');
-        $field = new xmldb_field('changeable', XMLDB_TYPE_INTEGER, '10', null, null, null, 1, 'delayedcounter');
-        if (!$dbman->field_exists($table, $field)) {
-            $dbman->add_field($table, $field);
+class hookcallbacks {
+    /**
+     * Initialises forum reactions on discussion pages.
+     *
+     * @param \core\hook\output\before_http_headers $payload
+     * @return void
+     */
+    public static function output_before_http_headers(\core\hook\output\before_http_headers $payload): void {
+        global $PAGE;
+        if ($PAGE->url->get_path() !== '/mod/forum/discuss.php') {
+            return;
         }
-
-        upgrade_plugin_savepoint(true, 2023050801, 'local', 'reactforum');
+        $discussionid = optional_param('d', 0, PARAM_INT);
+        if (!$discussionid) {
+            return;
+        }
+        local_reactforum_initreactions();
     }
-
-    return true;
 }

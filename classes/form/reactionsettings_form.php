@@ -1,15 +1,58 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-defined('MOODLE_INTERNAL') or die();
+/**
+ * Form for configuring reaction buttons on a forum or discussion.
+ *
+ * @package     local_reactforum
+ * @copyright   2026 Ponlawat Weerapanpisit <ponlawat_w@outlook.co.th>
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace local_reactforum\form;
+
+defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__ . '/../../../../lib/formslib.php');
 require_once(__DIR__ . '/../../lib.php');
 
-class reactionsettings_form extends \moodleform
-{
+/**
+ * Reaction settings form.
+ *
+ * POST field conventions used by the accompanying managereactions.js:
+ *   reactions_new[]              — text values of new text reactions
+ *   reactions_edit[<id>]         — updated text value for existing text reactions
+ *   reactions_delete[]           — ids of reactions to delete
+ *   reactions_new_image[]        — temp file ids of new image reactions
+ *   reactions_desc_new[<tempid>] — description for new image reaction (keyed by temp file id)
+ *   reactions_edit_image[<id>]   — temp file id to replace existing image (0 = keep current)
+ *   reactions_desc_edit[<id>]    — updated description for existing image reaction
+ */
+class reactionsettings_form extends \moodleform {
+    /** @var int|null */
     public $forumid = null;
+    /** @var int|null */
     public $discussionid = null;
 
+    /**
+     * Constructor.
+     *
+     * @param int|null $forumid
+     * @param int|null $discussionid
+     */
     public function __construct($forumid = null, $discussionid = null) {
         global $DB;
         $this->forumid = $forumid;
@@ -17,13 +60,16 @@ class reactionsettings_form extends \moodleform
         if ($this->discussionid) {
             $discussion = $DB->get_record('forum_discussions', ['id' => $this->discussionid]);
             if (!$discussion) {
-                throw new moodle_exception('Invalid discussion ID');
+                throw new \core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
             }
             $this->forumid = $discussion->forum;
         }
         parent::__construct();
     }
 
+    /**
+     * Form definition.
+     */
     public function definition() {
         $mform = $this->_form;
 
@@ -35,7 +81,13 @@ class reactionsettings_form extends \moodleform
             $mform->createElement('radio', 'reactiontype', '', get_string('reactionstype_image', 'local_reactforum'), 'image'),
         ];
         if (!$this->discussionid) {
-            $radioarray[] = $mform->createElement('radio', 'reactiontype', '', get_string('reactionstype_discussion', 'local_reactforum'), 'discussion');
+            $radioarray[] = $mform->createElement(
+                'radio',
+                'reactiontype',
+                '',
+                get_string('reactionstype_discussion', 'local_reactforum'),
+                'discussion'
+            );
         }
         $mform->addGroup($radioarray, 'reactiontype', get_string('reactionstype', 'local_reactforum'), ['<br>'], false);
         $mform->setDefault('reactiontype', $metadata ? $metadata->reactiontype : 'none');
@@ -66,7 +118,12 @@ class reactionsettings_form extends \moodleform
         $this->add_action_buttons(true);
     }
 
-    private function setmetadata() {
+    /**
+     * Updates or creates the metadata record for this forum/discussion.
+     *
+     * @return void
+     */
+    private function setmetadata(): void {
         global $DB;
         $data = $this->get_data();
         $metadata = local_reactforum_getreactionmetadata($this->forumid, $this->discussionid);
@@ -76,11 +133,11 @@ class reactionsettings_form extends \moodleform
             $metadata->delayedcounter = isset($data->delayedcounter) ? $data->delayedcounter : 0;
             $metadata->changeable = isset($data->changeable) ? $data->changeable : 0;
             if (!$DB->update_record('reactforum_metadata', $metadata)) {
-                throw new moodle_exception('Cannot update reaction type entry');
+                throw new \core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
             }
             return;
         }
-        $metadata = new stdClass();
+        $metadata = new \stdClass();
         $metadata->forum = $this->forumid;
         $metadata->discussion = $this->discussionid;
         $metadata->reactiontype = $data->reactiontype;
@@ -88,11 +145,17 @@ class reactionsettings_form extends \moodleform
         $metadata->delayedcounter = $data->delayedcounter ?? 0;
         $metadata->changeable = $data->changeable ?? 0;
         if (!$DB->insert_record('reactforum_metadata', $metadata)) {
-            throw new moodle_exception('Cannot add reaction type entry');
+            throw new \core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
         }
     }
 
-    public function process($modcontext = null) {
+    /**
+     * Processes the submitted form data and updates the database.
+     *
+     * @param \context_module|null $modcontext
+     * @return bool true on success
+     */
+    public function process($modcontext = null): bool {
         global $DB;
         if (!$modcontext) {
             $modcontext = local_reactforum_getmodcontextfromforumid($this->forumid);
@@ -101,13 +164,16 @@ class reactionsettings_form extends \moodleform
 
         $currentmetadata = local_reactforum_getreactionmetadata($this->forumid, $this->discussionid);
 
-        if ($currentmetadata && $data->reactiontype != $currentmetadata->reactiontype) {
-            $reactions = $DB->get_records('reactforum_buttons', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
+        if ($currentmetadata && $data->reactiontype !== $currentmetadata->reactiontype) {
+            $reactions = $DB->get_records(
+                'reactforum_buttons',
+                ['forum' => $this->forumid, 'discussion' => $this->discussionid]
+            );
             foreach ($reactions as $reaction) {
                 local_reactforum_removereaction($reaction->id);
             }
             $DB->delete_records('reactforum_metadata', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
-            
+
             if (!$this->discussionid) {
                 $discussionreactions = $DB->get_records('reactforum_buttons', ['forum' => $this->forumid]);
                 foreach ($discussionreactions as $discussionreaction) {
@@ -121,78 +187,98 @@ class reactionsettings_form extends \moodleform
 
         $fs = get_file_storage();
 
-        if (isset($_POST['reactions']) && isset($_POST['reactions']['new'])) {
-            if ($data->reactiontype == 'text') {
-                foreach ($_POST['reactions']['new'] as $reactiontxt) {
-                    $reaction = new stdClass();
-                    $reaction->forum = $this->forumid;
-                    $reaction->discussion = $this->discussionid;
-                    $reaction->reaction = $reactiontxt;
-                    if (!$DB->insert_record('reactforum_buttons', $reaction)) {
-                        throw new moodle_exception('Cannot create reaction');
-                    }
+        // New text reactions.
+        $newreactions = optional_param_array('reactions_new', [], PARAM_TEXT);
+        if ($data->reactiontype === 'text' && $newreactions) {
+            foreach ($newreactions as $reactiontxt) {
+                $reactiontxt = trim($reactiontxt);
+                if ($reactiontxt === '') {
+                    continue;
                 }
-            } else if ($data->reactiontype == 'image') {
-                foreach ($_POST['reactions']['new'] as $fileid) {
-                    $description = isset($_POST['reactions']['desc'])
-                        && isset($_POST['reactions']['desc']['new'])
-                        && isset($_POST['reactions']['desc']['new'][$fileid])
-                            ? $_POST['reactions']['desc']['new'][$fileid] : '';
+                $reaction = new \stdClass();
+                $reaction->forum = $this->forumid;
+                $reaction->discussion = $this->discussionid;
+                $reaction->reaction = $reactiontxt;
+                if (!$DB->insert_record('reactforum_buttons', $reaction)) {
+                    throw new \core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
+                }
+            }
+        }
 
-                    $reaction = new stdClass();
-                    $reaction->forum = $this->forumid;
-                    $reaction->discussion = $this->discussionid;
-                    $reaction->reaction = $description;
-                    $reactionid = $DB->insert_record('reactforum_buttons', $reaction);
-                    if (!$reactionid) {
-                        throw new moodle_exception('Cannot create reaction');
-                    }
-                    if (!local_reactforum_savetemp($fs, $modcontext->id, $fs->get_file_by_id($fileid), $reactionid)) {
-                        throw new moodle_exception('Cannot save reaction image from uploaded file');
-                    }
+        // New image reactions (temp file ids submitted by JS).
+        $newimages = optional_param_array('reactions_new_image', [], PARAM_INT);
+        if ($data->reactiontype === 'image' && $newimages) {
+            $descsnew = optional_param_array('reactions_desc_new', [], PARAM_TEXT);
+            foreach ($newimages as $fileid) {
+                $description = $descsnew[$fileid] ?? '';
+                $reaction = new \stdClass();
+                $reaction->forum = $this->forumid;
+                $reaction->discussion = $this->discussionid;
+                $reaction->reaction = $description;
+                $reactionid = $DB->insert_record('reactforum_buttons', $reaction);
+                if (!$reactionid) {
+                    throw new \core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
                 }
-                local_reactforum_cleartemp($fs);
-            }
-        }
-        if (isset($_POST['reactions']) && isset($_POST['reactions']['edit'])) {
-            if ($data->reactiontype == 'text') {
-                foreach ($_POST['reactions']['edit'] as $reactionid => $reaction) {
-                    if (trim($reaction) == '') {
-                        continue;
-                    }
-                    $reactionobj = new stdClass();
-                    $reactionobj->id = $reactionid;
-                    $reactionobj->reaction = $reaction;
-                    $DB->update_record('reactforum_buttons', $reactionobj);
-                }
-            } else if ($data->reactiontype == 'image') {
-                foreach ($_POST['reactions']['edit'] as $reactionid => $filetempid) {
-                    if ($filetempid > 0) {
-                        local_reactforum_savetemp($fs, $modcontext->id, $fs->get_file_by_id($filetempid), $reactionid);
-                    }
-                }
-                if (isset($_POST['reactions']['desc']) && isset($_POST['reactions']['desc']['edit'])) {
-                    foreach ($_POST['reactions']['desc']['edit'] as $reactionid => $newdescription) {
-                        $reactionobj = new stdClass();
-                        $reactionobj->id = $reactionid;
-                        $reactionobj->reaction = $newdescription;
-                        $DB->update_record('reactforum_buttons', $reactionobj);
-                    }
+                $tempfile = $fs->get_file_by_id($fileid);
+                if ($tempfile && !local_reactforum_savetemp($fs, $modcontext->id, $tempfile, $reactionid)) {
+                    throw new \core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
                 }
             }
+            local_reactforum_cleartemp($fs);
         }
-        if (isset($_POST['reactions']) && isset($_POST['reactions']['delete'])) {
-            foreach ($_POST['reactions']['delete'] as $reactionid) {
-                local_reactforum_removereaction($reactionid);
+
+        // Edit existing text reactions.
+        $editreactions = optional_param_array('reactions_edit', [], PARAM_TEXT);
+        if ($data->reactiontype === 'text' && $editreactions) {
+            foreach ($editreactions as $reactionid => $reaction) {
+                if (trim($reaction) === '') {
+                    continue;
+                }
+                $reactionobj = new \stdClass();
+                $reactionobj->id = clean_param($reactionid, PARAM_INT);
+                $reactionobj->reaction = $reaction;
+                $DB->update_record('reactforum_buttons', $reactionobj);
             }
         }
-        if ($data->reactiontype == 'none') {
-            $reactions = $DB->get_records('reactforum_buttons', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
+
+        // Edit existing image reactions (replace image and/or description).
+        $editimages = optional_param_array('reactions_edit_image', [], PARAM_INT);
+        if ($data->reactiontype === 'image' && $editimages) {
+            foreach ($editimages as $reactionid => $filetempid) {
+                $reactionid = clean_param($reactionid, PARAM_INT);
+                if ($filetempid > 0) {
+                    $tempfile = $fs->get_file_by_id($filetempid);
+                    if ($tempfile) {
+                        local_reactforum_savetemp($fs, $modcontext->id, $tempfile, $reactionid);
+                    }
+                }
+            }
+            $descedit = optional_param_array('reactions_desc_edit', [], PARAM_TEXT);
+            foreach ($descedit as $reactionid => $newdescription) {
+                $reactionobj = new \stdClass();
+                $reactionobj->id = clean_param($reactionid, PARAM_INT);
+                $reactionobj->reaction = $newdescription;
+                $DB->update_record('reactforum_buttons', $reactionobj);
+            }
+        }
+
+        // Delete reactions.
+        $deletereactions = optional_param_array('reactions_delete', [], PARAM_INT);
+        foreach ($deletereactions as $reactionid) {
+            local_reactforum_removereaction($reactionid);
+        }
+
+        if ($data->reactiontype === 'none') {
+            $reactions = $DB->get_records(
+                'reactforum_buttons',
+                ['forum' => $this->forumid, 'discussion' => $this->discussionid]
+            );
             foreach ($reactions as $reaction) {
                 local_reactforum_removereaction($reaction->id);
             }
             $DB->delete_records('reactforum_metadata', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
         }
+
         return true;
     }
 }

@@ -47,7 +47,6 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
         <KEY NAME="post" TYPE="foreign" FIELDS="post" REFTABLE="forum_posts" REFFIELDS="id"/>
-        <KEY NAME="reaction" TYPE="foreign" FIELDS="reaction" REFTABLE="reactforum_reactions" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>

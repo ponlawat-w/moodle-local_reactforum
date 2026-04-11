@@ -15,33 +15,19 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * local_reactforum database upgrade steps.
+ * Hook callbacks registration for local_reactforum.
  *
  * @package     local_reactforum
  * @copyright   2026 Ponlawat Weerapanpisit <ponlawat_w@outlook.co.th>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-/**
- * Upgrade steps for local_reactforum.
- *
- * @param int $oldversion
- * @return bool
- */
-function xmldb_local_reactforum_upgrade($oldversion) {
-    global $DB;
+defined('MOODLE_INTERNAL') || die();
 
-    $dbman = $DB->get_manager();
-
-    if ($oldversion < 2023050801) {
-        $table = new xmldb_table('reactforum_metadata');
-        $field = new xmldb_field('changeable', XMLDB_TYPE_INTEGER, '10', null, null, null, 1, 'delayedcounter');
-        if (!$dbman->field_exists($table, $field)) {
-            $dbman->add_field($table, $field);
-        }
-
-        upgrade_plugin_savepoint(true, 2023050801, 'local', 'reactforum');
-    }
-
-    return true;
-}
+$callbacks = [
+    [
+        'hook' => \core\hook\output\before_http_headers::class,
+        'callback' => [\local_reactforum\hookcallbacks::class, 'output_before_http_headers'],
+        'priority' => 500,
+    ],
+];
