@@ -37,8 +37,8 @@ $PAGE->set_url('/local/reactforum/managereactions.php', ['f' => $forumid, 'd' =>
 $discussion = $discussionid ? $DB->get_record('forum_discussions', ['id' => $discussionid], '*', MUST_EXIST) : null;
 if ($discussion) {
     $forumid = $discussion->forum;
-    $forummetadata = local_reactforum_getreactionmetadata($forumid);
-    if ($forummetadata && $forummetadata->reactiontype != 'discussion') {
+    $reactionsetting = local_reactforum_getreactionsetting($forumid);
+    if ($reactionsetting && $reactionsetting->reactiontype != 'discussion') {
         throw new core\exception\moodle_exception('Invalid reaction type');
     }
 }
@@ -106,8 +106,8 @@ $PAGE->requires->strings_for_js([
     'reactions_reupload',
     'description',
 ], 'local_reactforum');
-$currentmetadata = isset($forummetadata) ? $forummetadata : null;
-$reactionsdata = local_reactforum_getreactionsjson($forum->id, $discussion ? $discussion->id : null, $currentmetadata);
+$reactionsetting = isset($reactionsetting) ? $reactionsetting : null;
+$reactionsdata = local_reactforum_getreactionsjson($forum->id, $discussion ? $discussion->id : null, $reactionsetting);
 $PAGE->requires->js_call_amd('local_reactforum/managereactions', 'init', [$reactionsdata]);
 
 echo $OUTPUT->header();

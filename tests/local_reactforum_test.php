@@ -70,61 +70,65 @@ final class local_reactforum_test extends advanced_testcase {
         $this->context = context_module::instance($this->cm->id);
 
         $this->setUser($this->teacher);
-        [$this->discussion, $this->post] = $this->getDataGenerator()
+        $this->discussion = $this->getDataGenerator()
             ->get_plugin_generator('mod_forum')
-            ->create_discussion($this->course, $this->forum, (object)[
+            ->create_discussion([
+                'course' => $this->course->id,
+                'forum' => $this->forum->id,
                 'userid' => $this->teacher->id,
                 'subject' => 'Test discussion',
                 'message' => 'Test message',
             ]);
+        global $DB;
+        $this->post = $DB->get_record('forum_posts', ['discussion' => $this->discussion->id]);
     }
 
     /**
-     * Creates a default forum-level metadata record.
+     * Creates a default forum-level settings record.
      *
      * @param string $reactiontype
-     * @return \stdClass metadata record
+     * @return \stdClass settings record
      */
-    private function createmetadata(string $reactiontype = 'text'): \stdClass {
+    private function createreactionsetting(string $reactiontype = 'text'): \stdClass {
         global $DB;
-        $metadata = new \stdClass();
-        $metadata->forum = $this->forum->id;
-        $metadata->discussion = null;
-        $metadata->reactiontype = $reactiontype;
-        $metadata->reactionallreplies = 1;
-        $metadata->delayedcounter = 0;
-        $metadata->changeable = 1;
-        $metadata->id = $DB->insert_record('reactforum_metadata', $metadata);
-        return $metadata;
+        $reactionsetting = new \stdClass();
+        $reactionsetting->forum = $this->forum->id;
+        $reactionsetting->discussion = null;
+        $reactionsetting->reactiontype = $reactiontype;
+        $reactionsetting->reactionallreplies = 1;
+        $reactionsetting->delayedcounter = 0;
+        $reactionsetting->changeable = 1;
+        $reactionsetting->id = $DB->insert_record('local_reactforum_settings', $reactionsetting);
+        return $reactionsetting;
     }
 
     /**
-     * Creates a reaction button record.
+     * Creates a reaction record.
      *
      * @param string $label
      * @param int|null $discussionid
-     * @return \stdClass button record
+     * @return \stdClass reaction record
      */
-    private function createbutton(string $label = 'Like', $discussionid = null): \stdClass {
+    private function createreaction(string $label = 'Like', $discussionid = null): \stdClass {
         global $DB;
-        $button = new \stdClass();
-        $button->forum = $this->forum->id;
-        $button->discussion = $discussionid;
-        $button->reaction = $label;
-        $button->id = $DB->insert_record('reactforum_buttons', $button);
-        return $button;
+        $reaction = new \stdClass();
+        $reaction->forum = $this->forum->id;
+        $reaction->discussion = $discussionid;
+        $reaction->reaction = $label;
+        $reaction->id = $DB->insert_record('local_reactforum_reactions', $reaction);
+        return $reaction;
     }
 
-    // Tests for local_reactforum_getreactionmetadata.
+    // Tests for local_reactforum_getreactionsetting.
 
     /**
      * Forum-level metadata is returned when no discussion override exists.
      *
-     * @covers ::local_reactforum_getreactionmetadata
+     * @covers ::local_reactforum_getreactionsetting
      */
     public function test_getreactionmetadata_forum_level(): void {
-        $this->createmetadata('text');
-        $result = local_reactforum_getreactionmetadata($this->forum->id);
+        $this->createreactionsetting('text');
+        $result = local_reactforum_getreactionsetting($this->forum->id);
         $this->assertNotEmpty($result);
         $this->assertEquals('text', $result->reactiontype);
         $this->assertNull($result->discussion);
@@ -133,22 +137,22 @@ final class local_reactforum_test extends advanced_testcase {
     /**
      * Discussion-level metadata overrides forum-level metadata.
      *
-     * @covers ::local_reactforum_getreactionmetadata
+     * @covers ::local_reactforum_getreactionsetting
      */
     public function test_getreactionmetadata_discussion_level(): void {
         global $DB;
-        $forummetadata = $this->createmetadata('discussion');
+        $this->createreactionsetting('discussion');
 
-        $discmeta = new \stdClass();
-        $discmeta->forum = $this->forum->id;
-        $discmeta->discussion = $this->discussion->id;
-        $discmeta->reactiontype = 'text';
-        $discmeta->reactionallreplies = 0;
-        $discmeta->delayedcounter = 0;
-        $discmeta->changeable = 1;
-        $DB->insert_record('reactforum_metadata', $discmeta);
+        $discsetting = new \stdClass();
+        $discsetting->forum = $this->forum->id;
+        $discsetting->discussion = $this->discussion->id;
+        $discsetting->reactiontype = 'text';
+        $discsetting->reactionallreplies = 0;
+        $discsetting->delayedcounter = 0;
+        $discsetting->changeable = 1;
+        $DB->insert_record('local_reactforum_settings', $discsetting);
 
-        $result = local_reactforum_getreactionmetadata($this->forum->id, $this->discussion->id);
+        $result = local_reactforum_getreactionsetting($this->forum->id, $this->discussion->id);
         $this->assertNotEmpty($result);
         $this->assertEquals($this->discussion->id, $result->discussion);
     }
@@ -162,14 +166,14 @@ final class local_reactforum_test extends advanced_testcase {
      */
     public function test_react_creates_record_and_fires_event(): void {
         global $DB;
-        $metadata = $this->createmetadata();
-        $button = $this->createbutton('Like');
+        $this->createreactionsetting();
+        $reaction = $this->createreaction('Like');
 
         // React as the student on the teacher's post.
         $this->setUser($this->student);
         $eventsink = $this->redirectEvents();
 
-        $result = \local_reactforum\external\react::execute($this->post->id, $button->id);
+        $result = \local_reactforum\external\react::execute($this->post->id, $reaction->id);
 
         $events = $eventsink->get_events();
         $eventsink->close();
@@ -179,19 +183,19 @@ final class local_reactforum_test extends advanced_testcase {
         $this->assertCount(1, $createdevents);
 
         // DB record should exist.
-        $this->assertTrue($DB->record_exists('reactforum_reacted', [
+        $this->assertTrue($DB->record_exists('local_reactforum_user_reactions', [
             'post' => $this->post->id,
-            'reaction' => $button->id,
+            'reaction' => $reaction->id,
             'userid' => $this->student->id,
         ]));
 
-        // Result should have the button in it.
+        // Result should have the reaction in it.
         $statebyid = [];
         foreach ($result as $state) {
             $statebyid[$state['reactionid']] = $state;
         }
-        $this->assertArrayHasKey($button->id, $statebyid);
-        $this->assertTrue($statebyid[$button->id]['reacted']);
+        $this->assertArrayHasKey($reaction->id, $statebyid);
+        $this->assertTrue($statebyid[$reaction->id]['reacted']);
     }
 
     /**
@@ -201,22 +205,22 @@ final class local_reactforum_test extends advanced_testcase {
      */
     public function test_react_toggles_off_same_reaction(): void {
         global $DB;
-        $this->createmetadata();
-        $button = $this->createbutton('Like');
+        $this->createreactionsetting();
+        $reaction = $this->createreaction('Like');
 
         $this->setUser($this->student);
 
         // React once.
-        \local_reactforum\external\react::execute($this->post->id, $button->id);
-        $this->assertEquals(1, $DB->count_records('reactforum_reacted', ['post' => $this->post->id]));
+        \local_reactforum\external\react::execute($this->post->id, $reaction->id);
+        $this->assertEquals(1, $DB->count_records('local_reactforum_user_reactions', ['post' => $this->post->id]));
 
-        // React again with same button — should toggle off.
+        // React again with same reaction — should toggle off.
         $eventsink = $this->redirectEvents();
-        \local_reactforum\external\react::execute($this->post->id, $button->id);
+        \local_reactforum\external\react::execute($this->post->id, $reaction->id);
         $events = $eventsink->get_events();
         $eventsink->close();
 
-        $this->assertEquals(0, $DB->count_records('reactforum_reacted', ['post' => $this->post->id]));
+        $this->assertEquals(0, $DB->count_records('local_reactforum_user_reactions', ['post' => $this->post->id]));
         $deletedevents = array_filter($events, fn($e) => $e instanceof \local_reactforum\event\reaction_deleted);
         $this->assertCount(1, $deletedevents);
     }
@@ -228,25 +232,25 @@ final class local_reactforum_test extends advanced_testcase {
      */
     public function test_react_changes_reaction_when_changeable(): void {
         global $DB;
-        $meta = $this->createmetadata();
-        $meta->changeable = 1;
-        $DB->update_record('reactforum_metadata', $meta);
+        $reactionsetting = $this->createreactionsetting();
+        $reactionsetting->changeable = 1;
+        $DB->update_record('local_reactforum_settings', $reactionsetting);
 
-        $button1 = $this->createbutton('Like');
-        $button2 = $this->createbutton('Dislike');
+        $reaction1 = $this->createreaction('Like');
+        $reaction2 = $this->createreaction('Dislike');
 
         $this->setUser($this->student);
 
-        // React with button1.
-        \local_reactforum\external\react::execute($this->post->id, $button1->id);
+        // React with reaction1.
+        \local_reactforum\external\react::execute($this->post->id, $reaction1->id);
 
-        // Change to button2.
-        \local_reactforum\external\react::execute($this->post->id, $button2->id);
+        // Change to reaction2.
+        \local_reactforum\external\react::execute($this->post->id, $reaction2->id);
 
-        $this->assertEquals(1, $DB->count_records('reactforum_reacted', ['post' => $this->post->id]));
-        $this->assertTrue($DB->record_exists('reactforum_reacted', [
+        $this->assertEquals(1, $DB->count_records('local_reactforum_user_reactions', ['post' => $this->post->id]));
+        $this->assertTrue($DB->record_exists('local_reactforum_user_reactions', [
             'post' => $this->post->id,
-            'reaction' => $button2->id,
+            'reaction' => $reaction2->id,
         ]));
     }
 
@@ -257,21 +261,21 @@ final class local_reactforum_test extends advanced_testcase {
      */
     public function test_react_blocked_when_not_changeable(): void {
         global $DB;
-        $meta = $this->createmetadata();
-        $meta->changeable = 0;
-        $DB->update_record('reactforum_metadata', $meta);
+        $reactionsetting = $this->createreactionsetting();
+        $reactionsetting->changeable = 0;
+        $DB->update_record('local_reactforum_settings', $reactionsetting);
 
-        $button1 = $this->createbutton('Like');
-        $button2 = $this->createbutton('Dislike');
+        $reaction1 = $this->createreaction('Like');
+        $reaction2 = $this->createreaction('Dislike');
 
         $this->setUser($this->student);
 
         // First reaction.
-        \local_reactforum\external\react::execute($this->post->id, $button1->id);
+        \local_reactforum\external\react::execute($this->post->id, $reaction1->id);
 
         // Attempt to change should throw.
         $this->expectException(\moodle_exception::class);
-        \local_reactforum\external\react::execute($this->post->id, $button2->id);
+        \local_reactforum\external\react::execute($this->post->id, $reaction2->id);
     }
 
     /**
@@ -281,17 +285,17 @@ final class local_reactforum_test extends advanced_testcase {
      */
     public function test_removereaction_deletes_reacted_records(): void {
         global $DB;
-        $this->createmetadata();
-        $button = $this->createbutton('Like');
+        $this->createreactionsetting();
+        $reaction = $this->createreaction('Like');
 
         $this->setUser($this->student);
-        \local_reactforum\external\react::execute($this->post->id, $button->id);
-        $this->assertEquals(1, $DB->count_records('reactforum_reacted', ['reaction' => $button->id]));
+        \local_reactforum\external\react::execute($this->post->id, $reaction->id);
+        $this->assertEquals(1, $DB->count_records('local_reactforum_user_reactions', ['reaction' => $reaction->id]));
 
         $this->setAdminUser();
-        local_reactforum_removereaction($button->id);
-        $this->assertEquals(0, $DB->count_records('reactforum_reacted', ['reaction' => $button->id]));
-        $this->assertEquals(0, $DB->count_records('reactforum_buttons', ['id' => $button->id]));
+        local_reactforum_removereaction($reaction->id);
+        $this->assertEquals(0, $DB->count_records('local_reactforum_user_reactions', ['reaction' => $reaction->id]));
+        $this->assertEquals(0, $DB->count_records('local_reactforum_reactions', ['id' => $reaction->id]));
     }
 
     // Tests for privacy API.
@@ -303,14 +307,14 @@ final class local_reactforum_test extends advanced_testcase {
      */
     public function test_privacy_export_and_delete(): void {
         global $DB;
-        $this->createmetadata();
-        $button = $this->createbutton('Like');
+        $this->createreactionsetting();
+        $reaction = $this->createreaction('Like');
 
         $this->setUser($this->student);
-        \local_reactforum\external\react::execute($this->post->id, $button->id);
+        \local_reactforum\external\react::execute($this->post->id, $reaction->id);
 
         // Verify data exists.
-        $this->assertTrue($DB->record_exists('reactforum_reacted', ['userid' => $this->student->id]));
+        $this->assertTrue($DB->record_exists('local_reactforum_user_reactions', ['userid' => $this->student->id]));
 
         // Get contexts.
         $contextlist = \local_reactforum\privacy\provider::get_contexts_for_userid($this->student->id);
@@ -323,6 +327,6 @@ final class local_reactforum_test extends advanced_testcase {
             $contextlist->get_contextids()
         );
         \local_reactforum\privacy\provider::delete_data_for_user($approvedlist);
-        $this->assertFalse($DB->record_exists('reactforum_reacted', ['userid' => $this->student->id]));
+        $this->assertFalse($DB->record_exists('local_reactforum_user_reactions', ['userid' => $this->student->id]));
     }
 }

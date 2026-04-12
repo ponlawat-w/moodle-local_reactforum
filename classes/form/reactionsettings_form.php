@@ -73,7 +73,7 @@ class reactionsettings_form extends \moodleform {
     public function definition() {
         $mform = $this->_form;
 
-        $metadata = local_reactforum_getreactionmetadata($this->forumid, $this->discussionid);
+        $reactionsetting = local_reactforum_getreactionsetting($this->forumid, $this->discussionid);
 
         $radioarray = [
             $mform->createElement('radio', 'reactiontype', '', get_string('reactionstype_none', 'local_reactforum'), 'none'),
@@ -90,7 +90,7 @@ class reactionsettings_form extends \moodleform {
             );
         }
         $mform->addGroup($radioarray, 'reactiontype', get_string('reactionstype', 'local_reactforum'), ['<br>'], false);
-        $mform->setDefault('reactiontype', $metadata ? $metadata->reactiontype : 'none');
+        $mform->setDefault('reactiontype', $reactionsetting ? $reactionsetting->reactiontype : 'none');
 
         $mform->addGroup([], 'reactions', get_string('reactionsbuttons', 'local_reactforum'), ['<br>'], false);
 
@@ -98,15 +98,15 @@ class reactionsettings_form extends \moodleform {
 
         $mform->addElement('checkbox', 'reactionallreplies', get_string('reactions_allreplies', 'local_reactforum'));
         $mform->addHelpButton('reactionallreplies', 'reactions_allreplies', 'local_reactforum');
-        $mform->setDefault('reactionallreplies', $metadata ? ($metadata->reactionallreplies ? true : false) : false);
+        $mform->setDefault('reactionallreplies', $reactionsetting ? ($reactionsetting->reactionallreplies ? true : false) : false);
 
         $mform->addElement('checkbox', 'delayedcounter', get_string('reactions_delayedcounter', 'local_reactforum'));
         $mform->addHelpButton('delayedcounter', 'reactions_delayedcounter', 'local_reactforum');
-        $mform->setDefault('delayedcounter', $metadata && $metadata->delayedcounter ? true : false);
+        $mform->setDefault('delayedcounter', $reactionsetting && $reactionsetting->delayedcounter ? true : false);
 
         $mform->addElement('checkbox', 'changeable', get_string('reactions_changeable', 'local_reactforum'));
         $mform->addHelpButton('changeable', 'reactions_changeable', 'local_reactforum');
-        $mform->setDefault('changeable', $metadata ? ($metadata->changeable ? true : false) : true);
+        $mform->setDefault('changeable', $reactionsetting ? ($reactionsetting->changeable ? true : false) : true);
 
         $mform->addElement('hidden', 'f');
         $mform->setDefault('f', $this->forumid);
@@ -119,32 +119,32 @@ class reactionsettings_form extends \moodleform {
     }
 
     /**
-     * Updates or creates the metadata record for this forum/discussion.
+     * Updates or creates the setting record for this forum/discussion.
      *
      * @return void
      */
-    private function setmetadata(): void {
+    private function setsetting(): void {
         global $DB;
         $data = $this->get_data();
-        $metadata = local_reactforum_getreactionmetadata($this->forumid, $this->discussionid);
-        if ($metadata) {
-            $metadata->reactiontype = $data->reactiontype;
-            $metadata->reactionallreplies = isset($data->reactionallreplies) ? $data->reactionallreplies : 0;
-            $metadata->delayedcounter = isset($data->delayedcounter) ? $data->delayedcounter : 0;
-            $metadata->changeable = isset($data->changeable) ? $data->changeable : 0;
-            if (!$DB->update_record('reactforum_metadata', $metadata)) {
+        $reactionsetting = local_reactforum_getreactionsetting($this->forumid, $this->discussionid);
+        if ($reactionsetting) {
+            $reactionsetting->reactiontype = $data->reactiontype;
+            $reactionsetting->reactionallreplies = isset($data->reactionallreplies) ? $data->reactionallreplies : 0;
+            $reactionsetting->delayedcounter = isset($data->delayedcounter) ? $data->delayedcounter : 0;
+            $reactionsetting->changeable = isset($data->changeable) ? $data->changeable : 0;
+            if (!$DB->update_record('local_reactforum_settings', $reactionsetting)) {
                 throw new \core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
             }
             return;
         }
-        $metadata = new \stdClass();
-        $metadata->forum = $this->forumid;
-        $metadata->discussion = $this->discussionid;
-        $metadata->reactiontype = $data->reactiontype;
-        $metadata->reactionallreplies = $data->reactionallreplies ?? 0;
-        $metadata->delayedcounter = $data->delayedcounter ?? 0;
-        $metadata->changeable = $data->changeable ?? 0;
-        if (!$DB->insert_record('reactforum_metadata', $metadata)) {
+        $reactionsetting = new \stdClass();
+        $reactionsetting->forum = $this->forumid;
+        $reactionsetting->discussion = $this->discussionid;
+        $reactionsetting->reactiontype = $data->reactiontype;
+        $reactionsetting->reactionallreplies = $data->reactionallreplies ?? 0;
+        $reactionsetting->delayedcounter = $data->delayedcounter ?? 0;
+        $reactionsetting->changeable = $data->changeable ?? 0;
+        if (!$DB->insert_record('local_reactforum_settings', $reactionsetting)) {
             throw new \core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
         }
     }
@@ -162,28 +162,28 @@ class reactionsettings_form extends \moodleform {
         }
         $data = $this->get_data();
 
-        $currentmetadata = local_reactforum_getreactionmetadata($this->forumid, $this->discussionid);
+        $reactionsetting = local_reactforum_getreactionsetting($this->forumid, $this->discussionid);
 
-        if ($currentmetadata && $data->reactiontype !== $currentmetadata->reactiontype) {
+        if ($reactionsetting && $data->reactiontype !== $reactionsetting->reactiontype) {
             $reactions = $DB->get_records(
-                'reactforum_buttons',
+                'local_reactforum_reactions',
                 ['forum' => $this->forumid, 'discussion' => $this->discussionid]
             );
             foreach ($reactions as $reaction) {
                 local_reactforum_removereaction($reaction->id);
             }
-            $DB->delete_records('reactforum_metadata', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
+            $DB->delete_records('local_reactforum_settings', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
 
             if (!$this->discussionid) {
-                $discussionreactions = $DB->get_records('reactforum_buttons', ['forum' => $this->forumid]);
-                foreach ($discussionreactions as $discussionreaction) {
-                    local_reactforum_removereaction($discussionreaction->id);
+                $reactions = $DB->get_records('local_reactforum_reactions', ['forum' => $this->forumid]);
+                foreach ($reactions as $reaction) {
+                    local_reactforum_removereaction($reaction->id);
                 }
-                $DB->delete_records('reactforum_metadata', ['forum' => $this->forumid]);
+                $DB->delete_records('local_reactforum_settings', ['forum' => $this->forumid]);
             }
         }
 
-        $this->setmetadata();
+        $this->setsetting();
 
         $fs = get_file_storage();
 
@@ -199,7 +199,7 @@ class reactionsettings_form extends \moodleform {
                 $reaction->forum = $this->forumid;
                 $reaction->discussion = $this->discussionid;
                 $reaction->reaction = $reactiontxt;
-                if (!$DB->insert_record('reactforum_buttons', $reaction)) {
+                if (!$DB->insert_record('local_reactforum_reactions', $reaction)) {
                     throw new \core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
                 }
             }
@@ -215,7 +215,7 @@ class reactionsettings_form extends \moodleform {
                 $reaction->forum = $this->forumid;
                 $reaction->discussion = $this->discussionid;
                 $reaction->reaction = $description;
-                $reactionid = $DB->insert_record('reactforum_buttons', $reaction);
+                $reactionid = $DB->insert_record('local_reactforum_reactions', $reaction);
                 if (!$reactionid) {
                     throw new \core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
                 }
@@ -237,7 +237,7 @@ class reactionsettings_form extends \moodleform {
                 $reactionobj = new \stdClass();
                 $reactionobj->id = clean_param($reactionid, PARAM_INT);
                 $reactionobj->reaction = $reaction;
-                $DB->update_record('reactforum_buttons', $reactionobj);
+                $DB->update_record('local_reactforum_reactions', $reactionobj);
             }
         }
 
@@ -258,7 +258,7 @@ class reactionsettings_form extends \moodleform {
                 $reactionobj = new \stdClass();
                 $reactionobj->id = clean_param($reactionid, PARAM_INT);
                 $reactionobj->reaction = $newdescription;
-                $DB->update_record('reactforum_buttons', $reactionobj);
+                $DB->update_record('local_reactforum_reactions', $reactionobj);
             }
         }
 
@@ -270,13 +270,13 @@ class reactionsettings_form extends \moodleform {
 
         if ($data->reactiontype === 'none') {
             $reactions = $DB->get_records(
-                'reactforum_buttons',
+                'local_reactforum_reactions',
                 ['forum' => $this->forumid, 'discussion' => $this->discussionid]
             );
             foreach ($reactions as $reaction) {
                 local_reactforum_removereaction($reaction->id);
             }
-            $DB->delete_records('reactforum_metadata', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
+            $DB->delete_records('local_reactforum_settings', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
         }
 
         return true;

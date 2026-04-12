@@ -40,10 +40,10 @@ $string['eventreactiondeleted'] = 'Reaction deleted';
 
 $string['pluginname'] = 'Reactforum';
 
-$string['privacy:metadata:reactforum_reacted'] = 'Stores which reaction each user has applied to each post.';
-$string['privacy:metadata:reactforum_reacted:post'] = 'The ID of the post that was reacted to.';
-$string['privacy:metadata:reactforum_reacted:reaction'] = 'The ID of the reaction button used.';
-$string['privacy:metadata:reactforum_reacted:userid'] = 'The ID of the user who reacted.';
+$string['privacy:metadata:local_reactforum_user_reactions'] = 'Stores which reaction each user has applied to each post.';
+$string['privacy:metadata:local_reactforum_user_reactions:post'] = 'The ID of the post that was reacted to.';
+$string['privacy:metadata:local_reactforum_user_reactions:reaction'] = 'The ID of the reaction button used.';
+$string['privacy:metadata:local_reactforum_user_reactions:userid'] = 'The ID of the user who reacted.';
 
 $string['reactforum:forumconfig'] = 'Configure reactions of a forum module';
 

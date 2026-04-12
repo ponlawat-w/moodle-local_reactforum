@@ -35,7 +35,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 
 /**
- * Returns reaction metadata, buttons and per-post reaction state for a discussion.
+ * Returns reaction setting, buttons and per-post reaction state for a discussion.
  */
 class get_discussion_reactions extends external_api {
     /**
@@ -81,16 +81,31 @@ class get_discussion_reactions extends external_api {
 
         $reactionsdata->canmanage = local_reactforum_caneditdiscussion($discussion, $context);
 
-        // Convert metadata stdClass to array.
-        $metadata = (array) $reactionsdata->metadata;
+        // Convert setting stdClass to array.
+        $setting = (array) $reactionsdata->setting;
 
         // Convert reactions array to plain arrays.
+        $isimage = $reactionsdata->setting->reactiontype === 'image';
+        if ($isimage) {
+            $fs = get_file_storage();
+        }
         $reactions = [];
         foreach ($reactionsdata->reactions as $reaction) {
-            $reactions[] = [
+            $entry = [
                 'id' => (int) $reaction->id,
                 'reaction' => (string) $reaction->reaction,
             ];
+            if ($isimage) {
+                $files = $fs->get_area_files($context->id, 'local_reactforum', 'reactions', $reaction->id, 'id', false);
+                $file = reset($files);
+                $entry['imageurl'] = $file
+                    ? \core\url::make_pluginfile_url(
+                        $context->id, 'local_reactforum', 'reactions',
+                        $reaction->id, '/', $file->get_filename()
+                    )->out(false)
+                    : '';
+            }
+            $reactions[] = $entry;
         }
 
         // Convert per-post reaction state to plain arrays.
@@ -112,14 +127,14 @@ class get_discussion_reactions extends external_api {
         }
 
         return [
-            'metadata' => [
-                'id' => (int) $metadata['id'],
-                'forum' => (int) ($metadata['forum'] ?? 0),
-                'discussion' => (int) ($metadata['discussion'] ?? 0),
-                'reactiontype' => (string) $metadata['reactiontype'],
-                'reactionallreplies' => (int) $metadata['reactionallreplies'],
-                'delayedcounter' => (int) $metadata['delayedcounter'],
-                'changeable' => (int) $metadata['changeable'],
+            'setting' => [
+                'id' => (int) $setting['id'],
+                'forum' => (int) ($setting['forum'] ?? 0),
+                'discussion' => (int) ($setting['discussion'] ?? 0),
+                'reactiontype' => (string) $setting['reactiontype'],
+                'reactionallreplies' => (int) $setting['reactionallreplies'],
+                'delayedcounter' => (int) $setting['delayedcounter'],
+                'changeable' => (int) $setting['changeable'],
             ],
             'reactions' => $reactions,
             'posts' => $posts,
@@ -134,8 +149,8 @@ class get_discussion_reactions extends external_api {
      */
     public static function execute_returns(): ?external_single_structure {
         return new external_single_structure([
-            'metadata' => new external_single_structure([
-                'id' => new external_value(PARAM_INT, 'Metadata record id'),
+            'setting' => new external_single_structure([
+                'id' => new external_value(PARAM_INT, 'Setting record id'),
                 'forum' => new external_value(PARAM_INT, 'Forum id'),
                 'discussion' => new external_value(PARAM_INT, 'Discussion id (0 = forum-level)'),
                 'reactiontype' => new external_value(PARAM_ALPHA, 'Reaction type: text, image, discussion, none'),
@@ -147,6 +162,7 @@ class get_discussion_reactions extends external_api {
                 new external_single_structure([
                     'id' => new external_value(PARAM_INT, 'Reaction button id'),
                     'reaction' => new external_value(PARAM_TEXT, 'Button label or image description'),
+                    'imageurl' => new external_value(PARAM_URL, 'URL to the reaction image (image type only)', VALUE_OPTIONAL),
                 ])
             ),
             'posts' => new external_multiple_structure(

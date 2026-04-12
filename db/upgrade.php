@@ -34,13 +34,30 @@ function xmldb_local_reactforum_upgrade($oldversion) {
     $dbman = $DB->get_manager();
 
     if ($oldversion < 2023050801) {
-        $table = new xmldb_table('reactforum_metadata');
+        $table = new xmldb_table('local_reactforum_settings');
         $field = new xmldb_field('changeable', XMLDB_TYPE_INTEGER, '10', null, null, null, 1, 'delayedcounter');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
 
         upgrade_plugin_savepoint(true, 2023050801, 'local', 'reactforum');
+    }
+
+    if ($oldversion < 2026041200) {
+        $renames = [
+            'reactforum_metadata' => 'local_reactforum_settings',
+            'reactforum_buttons' => 'local_reactforum_reactions',
+            'reactforum_reacted' => 'local_reactforum_user_reactions',
+        ];
+
+        foreach ($renames as $oldname => $newname) {
+            $table = new xmldb_table("{$oldname}");
+            if ($dbman->table_exists($table)) {
+                $dbman->rename_table($table, $newname);
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026041200, 'local', 'reactforum');
     }
 
     return true;

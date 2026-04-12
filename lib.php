@@ -74,15 +74,15 @@ function local_reactforum_extend_settings_navigation($settingsnav, $context) {
  */
 function local_reactforum_caneditdiscussion($discussion, $modcontext) {
     global $USER;
-    $forummetadata = local_reactforum_getreactionmetadata($discussion->forum);
-    if ($forummetadata && $forummetadata->reactiontype != 'discussion') {
+    $reactionsetting = local_reactforum_getreactionsetting($discussion->forum);
+    if ($reactionsetting && $reactionsetting->reactiontype != 'discussion') {
         return false;
     }
     return $discussion->userid == $USER->id || has_capability('mod/forum:editanypost', $modcontext);
 }
 
 /**
- * Fetches the reaction metadata record for a forum or discussion.
+ * Fetches the reaction setting record for a forum or discussion.
  *
  * Pass $discussionid to get discussion-level override; pass only $forumid for forum-level.
  *
@@ -90,13 +90,13 @@ function local_reactforum_caneditdiscussion($discussion, $modcontext) {
  * @param int|null $discussionid
  * @return stdClass|false
  */
-function local_reactforum_getreactionmetadata($forumid = null, $discussionid = null) {
+function local_reactforum_getreactionsetting($forumid = null, $discussionid = null) {
     global $DB;
     if ($discussionid) {
-        return $DB->get_record('reactforum_metadata', ['discussion' => $discussionid]);
+        return $DB->get_record('local_reactforum_settings', ['discussion' => $discussionid]);
     }
     if ($forumid) {
-        return $DB->get_record('reactforum_metadata', ['forum' => $forumid, 'discussion' => null]);
+        return $DB->get_record('local_reactforum_settings', ['forum' => $forumid, 'discussion' => null]);
     }
     throw new core\exception\moodle_exception('error_invalidforum', 'local_reactforum');
 }
@@ -106,77 +106,45 @@ function local_reactforum_getreactionmetadata($forumid = null, $discussionid = n
  *
  * @param int $forumid
  * @param int|null $discussionid
- * @param stdClass|null $metadata pre-fetched metadata record (optional)
+ * @param stdClass|null $setting pre-fetched setting record (optional)
  * @return string JSON-encoded reactions array or null
  */
-function local_reactforum_getreactionsjson($forumid, $discussionid, $metadata = null) {
+function local_reactforum_getreactionsjson($forumid, $discussionid, $reactionsetting = null) {
     global $DB;
-    if (!$metadata) {
-        $metadata = local_reactforum_getreactionmetadata($forumid, $discussionid);
+    if (!$reactionsetting) {
+        $reactionsetting = local_reactforum_getreactionsetting($forumid, $discussionid);
     }
-    if (!$metadata) {
+    if (!$reactionsetting) {
         return json_encode(null);
     }
-    $reactions = $DB->get_records('reactforum_buttons', ['forum' => $forumid, 'discussion' => $discussionid]);
+    $reactions = $DB->get_records('local_reactforum_reactions', ['forum' => $forumid, 'discussion' => $discussionid]);
+
+    $isimage = $reactionsetting->reactiontype === 'image';
+    if ($isimage) {
+        $context = local_reactforum_getmodcontextfromforumid($forumid);
+        $fs = get_file_storage();
+    }
 
     $values = [];
     foreach ($reactions as $reaction) {
-        $values[] = ['id' => $reaction->id, 'value' => $reaction->reaction];
+        $value = ['id' => $reaction->id, 'value' => $reaction->reaction];
+        if ($isimage) {
+            $files = $fs->get_area_files($context->id, 'local_reactforum', 'reactions', $reaction->id, 'id', false);
+            $file = reset($files);
+            $value['imageurl'] = $file
+                ? \core\url::make_pluginfile_url(
+                    $context->id, 'local_reactforum', 'reactions',
+                    $reaction->id, '/', $file->get_filename()
+                )->out(false)
+                : null;
+        }
+        $values[] = $value;
     }
 
     return json_encode([
-        'type' => $metadata->reactiontype,
+        'type' => $reactionsetting->reactiontype,
         'reactions' => $values,
     ]);
-}
-
-/**
- * Copies a draft file into the plugin's temporary file area and returns the stored_file.
- *
- * @param file_storage $fs
- * @param string $drafturl URL of the draft file (draftfile.php/…)
- * @return stored_file
- */
-function local_reactforum_movedrafttotemp($fs, $drafturl) {
-    global $USER;
-
-    $urlparts = explode('draftfile.php/', $drafturl);
-    $pathparts = explode('/', $urlparts[1]);
-
-    $draftinfo = [
-        'contextid' => $pathparts[0],
-        'component' => $pathparts[1],
-        'filearea' => $pathparts[2],
-        'itemid' => $pathparts[3],
-        'filename' => urldecode($pathparts[4]),
-    ];
-
-    $draftfile = $fs->get_file(
-        $draftinfo['contextid'],
-        $draftinfo['component'],
-        $draftinfo['filearea'],
-        $draftinfo['itemid'],
-        '/',
-        $draftinfo['filename']
-    );
-    if (!$draftfile) {
-        throw new core\exception\moodle_exception('error_draftnotfound', 'local_reactforum');
-    }
-
-    $tempfileinfo = [
-        'contextid' => 7,
-        'component' => 'user',
-        'filearea' => 'local_reactforum_temp',
-        'itemid' => time(),
-        'filepath' => '/' . $USER->id . '/',
-        'filename' => $draftinfo['filename'],
-    ];
-
-    while ($fs->file_exists(0, 'local_reactforum', 'safetemp', $tempfileinfo['itemid'], '/', $tempfileinfo['filename'])) {
-        $tempfileinfo['itemid']++;
-    }
-
-    return $fs->create_file_from_storedfile($tempfileinfo, $draftfile);
 }
 
 /**
@@ -188,12 +156,10 @@ function local_reactforum_movedrafttotemp($fs, $drafturl) {
 function local_reactforum_cleartemp($fs) {
     global $USER;
 
-    $files = $fs->get_area_files(7, 'user', 'local_reactforum_temp');
-
+    $usercontext = \context_user::instance($USER->id);
+    $files = $fs->get_area_files($usercontext->id, 'local_reactforum', 'temp');
     foreach ($files as $file) {
-        if ($file->get_filepath() == '/' . $USER->id . '/') {
-            $file->delete();
-        }
+        $file->delete();
     }
 }
 
@@ -203,7 +169,7 @@ function local_reactforum_cleartemp($fs) {
  * @param file_storage $fs
  * @param int $contextid context id of the forum module
  * @param stored_file $tempfile the temporary file to move
- * @param int $reactionid id of the reactforum_buttons record
+ * @param int $reactionid id of the local_reactforum_reactions record
  * @return stored_file
  */
 function local_reactforum_savetemp($fs, $contextid, $tempfile, $reactionid) {
@@ -257,13 +223,13 @@ function local_reactforum_getmodcontextfromforumid($forumid) {
 /**
  * Deletes a reaction button and all associated user reactions and image files.
  *
- * @param int $reactionid id of the reactforum_buttons record
+ * @param int $reactionid id of the local_reactforum_reactions record
  * @return bool true on success
  */
 function local_reactforum_removereaction($reactionid) {
     global $DB;
 
-    $reaction = $DB->get_record('reactforum_buttons', ['id' => $reactionid]);
+    $reaction = $DB->get_record('local_reactforum_reactions', ['id' => $reactionid]);
     if (!$reaction) {
         throw new core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
     }
@@ -278,11 +244,11 @@ function local_reactforum_removereaction($reactionid) {
         $file->delete();
     }
 
-    if (!$DB->delete_records('reactforum_reacted', ['reaction' => $reactionid])) {
+    if (!$DB->delete_records('local_reactforum_user_reactions', ['reaction' => $reactionid])) {
         return false;
     }
 
-    if (!$DB->delete_records('reactforum_buttons', ['id' => $reactionid])) {
+    if (!$DB->delete_records('local_reactforum_reactions', ['id' => $reactionid])) {
         return false;
     }
 
@@ -292,26 +258,26 @@ function local_reactforum_removereaction($reactionid) {
 /**
  * Returns a data object describing one reaction button's state for one post.
  *
- * @param stdClass $metadata reactforum_metadata record
+ * @param stdClass $setting local_reactforum_settings record
  * @param int $postid
  * @param int $reactionid
  * @param bool $reactedpost whether the current user has already reacted on this post
  * @param int $postuser userid of the post author
  * @return stdClass with properties: reacted (bool), count (int|null), enabled (bool)
  */
-function local_reactforum_getpostreactiondata($metadata, $postid, $reactionid, $reactedpost, $postuser) {
+function local_reactforum_getpostreactiondata($reactionsetting, $postid, $reactionid, $reactedpost, $postuser) {
     global $DB, $USER;
     $result = new stdClass();
     $result->reacted = $DB->count_records(
-        'reactforum_reacted',
+        'local_reactforum_user_reactions',
         ['post' => $postid, 'reaction' => $reactionid, 'userid' => $USER->id]
     ) > 0;
-    $canseecounter = !$metadata->delayedcounter || $reactedpost || $postuser == $USER->id;
+    $canseecounter = !$reactionsetting->delayedcounter || $reactedpost || $postuser == $USER->id;
     $result->count = $canseecounter
-        ? $DB->count_records('reactforum_reacted', ['post' => $postid, 'reaction' => $reactionid])
+        ? $DB->count_records('local_reactforum_user_reactions', ['post' => $postid, 'reaction' => $reactionid])
         : null;
     $result->enabled = ($postuser != $USER->id) &&
-        ($metadata->changeable || (!$metadata->changeable && !$reactedpost));
+        ($reactionsetting->changeable || (!$reactionsetting->changeable && !$reactedpost));
     return $result;
 }
 
@@ -320,22 +286,22 @@ function local_reactforum_getpostreactiondata($metadata, $postid, $reactionid, $
  *
  * Returns an empty array when reactions are not applicable for the post (e.g. reply).
  *
- * @param stdClass $metadata reactforum_metadata record
+ * @param stdClass $setting local_reactforum_settings record
  * @param int $postid
  * @return array<int, stdClass>
  */
-function local_reactforum_getpostreactionsdata($metadata, $postid) {
+function local_reactforum_getpostreactionsdata($reactionsetting, $postid) {
     global $DB, $USER;
-    $reactions = $DB->get_records('reactforum_buttons', ['forum' => $metadata->forum, 'discussion' => $metadata->discussion]);
+    $reactions = $DB->get_records('local_reactforum_reactions', ['forum' => $reactionsetting->forum, 'discussion' => $reactionsetting->discussion]);
     $post = $DB->get_record('forum_posts', ['id' => $postid]);
-    if (!$metadata->reactionallreplies && $post->parent) {
+    if (!$reactionsetting->reactionallreplies && $post->parent) {
         return [];
     }
-    $reactedpost = $DB->count_records('reactforum_reacted', ['post' => $post->id, 'userid' => $USER->id]) > 0;
+    $reactedpost = $DB->count_records('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]) > 0;
     $results = [];
     foreach ($reactions as $reaction) {
         $results[$reaction->id] = local_reactforum_getpostreactiondata(
-            $metadata,
+            $reactionsetting,
             $postid,
             $reaction->id,
             $reactedpost,
@@ -346,7 +312,7 @@ function local_reactforum_getpostreactionsdata($metadata, $postid) {
 }
 
 /**
- * Builds a complete reactions data object for a discussion (metadata + buttons + per-post states).
+ * Builds a complete reactions data object for a discussion (setting + buttons + per-post states).
  *
  * Returns null when no reaction configuration is found for the discussion.
  *
@@ -360,25 +326,61 @@ function local_reactforum_getdiscussionreactionsdata($discussionid) {
         throw new core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
     }
     $result = new stdClass();
-    $result->metadata = local_reactforum_getreactionmetadata($discussion->forum, $discussion->id);
-    if (!$result->metadata) {
-        $result->metadata = local_reactforum_getreactionmetadata($discussion->forum);
+    $result->setting = local_reactforum_getreactionsetting($discussion->forum, $discussion->id);
+    if (!$result->setting) {
+        $result->setting = local_reactforum_getreactionsetting($discussion->forum);
     }
-    if (!$result->metadata) {
+    if (!$result->setting) {
         return null;
     }
-    $result->reactions = $result->metadata->discussion
-        ? array_values($DB->get_records('reactforum_buttons', ['discussion' => $discussion->id]))
-        : array_values($DB->get_records('reactforum_buttons', ['forum' => $discussion->forum]));
+    $result->reactions = $result->setting->discussion
+        ? array_values($DB->get_records('local_reactforum_reactions', ['discussion' => $discussion->id]))
+        : array_values($DB->get_records('local_reactforum_reactions', ['forum' => $discussion->forum]));
     $result->posts = [];
     $posts = $DB->get_records('forum_posts', ['discussion' => $discussionid]);
     foreach ($posts as $post) {
-        if (!$result->metadata->reactionallreplies && $post->parent) {
+        if (!$result->setting->reactionallreplies && $post->parent) {
             continue;
         }
-        $result->posts[$post->id] = local_reactforum_getpostreactionsdata($result->metadata, $post->id);
+        $result->posts[$post->id] = local_reactforum_getpostreactionsdata($result->setting, $post->id);
     }
     return $result;
+}
+
+/**
+ * Serves stored reaction image files via pluginfile.php.
+ *
+ * @param stdClass $course
+ * @param stdClass $cm
+ * @param context $context
+ * @param string $filearea
+ * @param array $args
+ * @param bool $forcedownload
+ * @param array $options
+ * @return bool false if file not found
+ */
+function local_reactforum_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []) {
+    require_login($course, false, $cm);
+
+    if ($filearea !== 'reactions') {
+        return false;
+    }
+    if (isguestuser()) {
+        return false;
+    }
+    require_capability('mod/forum:viewdiscussion', $context);
+
+    $itemid = array_shift($args);
+    $filename = array_pop($args);
+    $filepath = $args ? ('/' . implode('/', $args) . '/') : '/';
+
+    $fs = get_file_storage();
+    $file = $fs->get_file($context->id, 'local_reactforum', 'reactions', $itemid, $filepath, $filename);
+    if (!$file || $file->is_directory()) {
+        return false;
+    }
+
+    send_stored_file($file, null, 0, $forcedownload, $options);
 }
 
 /**

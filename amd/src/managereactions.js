@@ -227,7 +227,7 @@ export const init = currentreactionsjsonstr => {
             for (const reaction of reactions) {
                 const $img = $('<img/>');
                 $img.attr('alt', reaction.id)
-                    .attr('src', M.cfg.wwwroot + '/local/reactforum/image.php?id=' + reaction.id)
+                    .attr('src', reaction.imageurl ?? '')
                     .addClass('reaction-img');
 
                 const $descriptioninput = $('<input>')

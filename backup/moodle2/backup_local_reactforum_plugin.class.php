@@ -46,31 +46,31 @@ class backup_local_reactforum_plugin extends backup_local_plugin {
         $plugin->add_child($wrapper);
 
         // Reaction configuration per forum (and optionally per discussion).
-        $metadata = new backup_nested_element(
-            'reactforum_metadata',
+        $setting = new backup_nested_element(
+            'local_reactforum_settings',
             ['id'],
             ['discussion', 'reactiontype', 'reactionallreplies', 'delayedcounter', 'changeable']
         );
 
         // Reaction buttons (text labels or image descriptions).
-        $buttons = new backup_nested_element('reactforum_buttons');
+        $buttons = new backup_nested_element('local_reactforum_reactions');
         $button = new backup_nested_element(
-            'reactforum_button',
+            'local_reactforum_reactions',
             ['id'],
             ['discussion', 'reaction']
         );
 
         // Individual user reactions on posts.
-        $reacteds = new backup_nested_element('reactforum_reacteds');
+        $reacteds = new backup_nested_element('local_reactforum_user_reactions');
         $reacted = new backup_nested_element(
-            'reactforum_reacted',
+            'local_reactforum_user_reactions',
             ['id'],
             ['userid', 'post', 'reaction']
         );
 
         // Build the element tree.
-        $wrapper->add_child($metadata);
-        $metadata->add_child($buttons);
+        $wrapper->add_child($setting);
+        $setting->add_child($buttons);
         $buttons->add_child($button);
 
         $wrapper->add_child($reacteds);
@@ -79,21 +79,21 @@ class backup_local_reactforum_plugin extends backup_local_plugin {
         // Set sources — limit to this forum's data.
         $forumid = backup_helper::is_sqlparam($this->task->get_activityid());
 
-        $metadata->set_source_sql(
-            'SELECT * FROM {reactforum_metadata} WHERE forum = ?',
+        $setting->set_source_sql(
+            'SELECT * FROM {local_reactforum_settings} WHERE forum = ?',
             [$forumid]
         );
 
         $button->set_source_sql(
-            'SELECT * FROM {reactforum_buttons} WHERE forum = ?',
+            'SELECT * FROM {local_reactforum_reactions} WHERE forum = ?',
             [$forumid]
         );
 
         $reacted->set_source_sql(
             <<<SQL
             SELECT rr.*
-              FROM {reactforum_reacted} rr
-              JOIN {reactforum_buttons} rb ON rb.id = rr.reaction
+              FROM {local_reactforum_user_reactions} rr
+              JOIN {local_reactforum_reactions} rb ON rb.id = rr.reaction
              WHERE rb.forum = ?
             SQL,
             [$forumid]
@@ -102,7 +102,7 @@ class backup_local_reactforum_plugin extends backup_local_plugin {
         // Annotate IDs that need remapping on restore.
         $reacted->annotate_ids('user', 'userid');
         $reacted->annotate_ids('forum_post', 'post');
-        $reacted->annotate_ids('reactforum_button', 'reaction');
+        $reacted->annotate_ids('local_reactforum_reactions', 'reaction');
 
         // Annotate image files for image-type reactions.
         $button->annotate_files('local_reactforum', 'reactions', 'id');

@@ -29,12 +29,12 @@ export const init = (discussionid) => {
     /**
      * Updates all reaction button states after a react action.
      *
-     * @param {object} metadata
+     * @param {object} setting
      * @param {jQuery} $button — the button that was clicked
      * @param {jQuery} $reactionsarea — the container for reaction buttons on this post
      * @param {Array}  postreactions — array of {reactionid, reacted, count, enabled} from WS
      */
-    const reacted = (metadata, $button, $reactionsarea, postreactions) => {
+    const reacted = (setting, $button, $reactionsarea, postreactions) => {
         const $reactbuttons = $reactionsarea.find('.react-btn');
         // Build a map for O(1) lookup.
         const statebyid = {};
@@ -48,7 +48,7 @@ export const init = (discussionid) => {
             if (!state) {
                 $reactbutton.prop('disabled', true);
             } else {
-                applybutton(metadata, $reactbutton, state);
+                applybutton(setting, $reactbutton, state);
             }
         }
         $button.prop('disabled', false);
@@ -57,11 +57,11 @@ export const init = (discussionid) => {
     /**
      * Sends a react request for the given button.
      *
-     * @param {object} metadata
+     * @param {object} setting
      * @param {jQuery} $button
      * @param {jQuery} $reactionsarea
      */
-    const react = (metadata, $button, $reactionsarea) => {
+    const react = (setting, $button, $reactionsarea) => {
         const reactable = parseInt($button.attr('data-reactable'));
         if (!reactable) {
             return;
@@ -74,7 +74,7 @@ export const init = (discussionid) => {
             args: {postid, reactionid},
         }])[0]
         .then(response => {
-            reacted(metadata, $button, $reactionsarea, response);
+            reacted(setting, $button, $reactionsarea, response);
             return;
         })
         .catch(() => {
@@ -94,18 +94,18 @@ export const init = (discussionid) => {
     /**
      * Applies the given reaction state to a button element.
      *
-     * @param {object} metadata
+     * @param {object} setting
      * @param {jQuery} $button
      * @param {object} state — {reacted, count, enabled}
      */
-    const applybutton = (metadata, $button, state) => {
+    const applybutton = (setting, $button, state) => {
         $button.removeClass('btn-primary btn-outline-primary');
         $button.addClass(state.reacted ? 'btn-primary' : 'btn-outline-primary');
         const $counter = $button.find('.reaction-counter');
         $counter.html(state.count !== null && state.count !== undefined
-            ? getcountertext(metadata.reactiontype, state.count)
+            ? getcountertext(setting.reactiontype, state.count)
             : '');
-        if (!parseInt(metadata.delayedcounter) || (state.count !== null && state.count !== undefined)) {
+        if (!parseInt(setting.delayedcounter) || (state.count !== null && state.count !== undefined)) {
             $counter.show();
         } else {
             $counter.hide();
@@ -145,12 +145,12 @@ export const init = (discussionid) => {
             $button.attr('data-post-id', postid)
                    .attr('data-reaction-id', reaction.id);
 
-            if (reactionsdata.metadata.reactiontype === 'text') {
+            if (reactionsdata.setting.reactiontype === 'text') {
                 $button.html(reaction.reaction);
-            } else if (reactionsdata.metadata.reactiontype === 'image') {
+            } else if (reactionsdata.setting.reactiontype === 'image') {
                 $button.html(
                     $('<img>').addClass('reaction-img')
-                              .attr('src', `${M.cfg.wwwroot}/local/reactforum/image.php?id=${reaction.id}`)
+                              .attr('src', reaction.imageurl)
                               .attr('alt', reaction.reaction)
                               .attr('title', reaction.reaction)
                 );
@@ -161,9 +161,9 @@ export const init = (discussionid) => {
             const $counter = $('<span>').addClass('reaction-counter ml-1');
             $button.append($counter);
             $button.on('click', function() {
-                react(reactionsdata.metadata, $(this), $reactionsarea);
+                react(reactionsdata.setting, $(this), $reactionsarea);
             });
-            applybutton(reactionsdata.metadata, $button, state);
+            applybutton(reactionsdata.setting, $button, state);
             $reactionsarea.append($button);
         }
         $appendedelement.append($reactionsarea);

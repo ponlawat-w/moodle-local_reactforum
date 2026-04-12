@@ -32,7 +32,7 @@ class reaction_deleted extends \core\event\base {
      * Set basic properties for the event.
      */
     protected function init(): void {
-        $this->data['objecttable'] = 'reactforum_reacted';
+        $this->data['objecttable'] = 'local_reactforum_user_reactions';
         $this->data['crud'] = 'd';
         $this->data['edulevel'] = self::LEVEL_PARTICIPATING;
     }
@@ -67,9 +67,9 @@ class reaction_deleted extends \core\event\base {
     }
 
     /**
-     * Create an event instance from a reactforum_reacted record id.
+     * Create an event instance from a local_reactforum_user_reactions record id.
      *
-     * @param int $reactedid id of the reactforum_reacted record (before deletion)
+     * @param int $reactedid id of the local_reactforum_user_reactions record (before deletion)
      * @param int $postid id of the forum post
      * @param \core\context\module $context
      * @return reaction_deleted

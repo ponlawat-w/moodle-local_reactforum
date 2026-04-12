@@ -28,7 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 $functions = [
     'local_reactforum_get_discussion_reactions' => [
         'classname' => \local_reactforum\external\get_discussion_reactions::class,
-        'description' => 'Get reaction metadata, buttons, and per-post state for a discussion.',
+        'description' => 'Get reaction setting, buttons, and per-post state for a discussion.',
         'type' => 'read',
         'ajax' => true,
         'loginrequired' => true,

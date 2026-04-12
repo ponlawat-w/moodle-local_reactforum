@@ -34,68 +34,68 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
     protected function define_module_plugin_structure(): array {
         return [
             new restore_path_element(
-                $this->get_namefor('reactforum_metadata'),
-                $this->get_pathfor('/reactforum_metadata')
+                $this->get_namefor('local_reactforum_settings'),
+                $this->get_pathfor('/local_reactforum_settings')
             ),
             new restore_path_element(
-                $this->get_namefor('reactforum_button'),
-                $this->get_pathfor('/reactforum_metadata/reactforum_buttons/reactforum_button')
+                $this->get_namefor('local_reactforum_reactions'),
+                $this->get_pathfor('/local_reactforum_settings/local_reactforum_reactions/local_reactforum_reaction')
             ),
             new restore_path_element(
-                $this->get_namefor('reactforum_reacted'),
-                $this->get_pathfor('/reactforum_reacteds/reactforum_reacted')
+                $this->get_namefor('local_reactforum_user_reactions'),
+                $this->get_pathfor('/local_reactforum_user_reactions/local_reactforum_user_reactions')
             ),
         ];
     }
 
     /**
-     * Restores a reactforum_metadata record.
+     * Restores a local_reactforum_settings record.
      *
      * @param array $data
      * @return void
      */
-    public function process_local_reactforum_reactforum_metadata(array $data): void {
+    public function process_local_reactforum_local_reactforum_settings(array $data): void {
         global $DB;
         $record = (object) $data;
         $record->forum = $this->get_task()->get_activityid();
         $record->discussion = $record->discussion
             ? $this->get_mappingid('forum_discussion', $record->discussion)
             : null;
-        $newid = $DB->insert_record('reactforum_metadata', $record);
-        $this->set_mapping($this->get_namefor('reactforum_metadata'), $data['id'], $newid);
+        $newid = $DB->insert_record('local_reactforum_settings', $record);
+        $this->set_mapping($this->get_namefor('local_reactforum_settings'), $data['id'], $newid);
     }
 
     /**
-     * Restores a reactforum_button record and its associated image files.
+     * Restores a local_reactforum_reactions record and its associated image files.
      *
      * @param array $data
      * @return void
      */
-    public function process_local_reactforum_reactforum_button(array $data): void {
+    public function process_local_reactforum_local_reactforum_reactions(array $data): void {
         global $DB;
         $record = (object) $data;
         $record->forum = $this->get_task()->get_activityid();
         $record->discussion = $record->discussion
             ? $this->get_mappingid('forum_discussion', $record->discussion)
             : null;
-        $newid = $DB->insert_record('reactforum_buttons', $record);
-        $this->set_mapping($this->get_namefor('reactforum_button'), $data['id'], $newid, true);
+        $newid = $DB->insert_record('local_reactforum_reactions', $record);
+        $this->set_mapping($this->get_namefor('local_reactforum_reactions'), $data['id'], $newid, true);
     }
 
     /**
-     * Restores a reactforum_reacted record.
+     * Restores a local_reactforum_user_reactions record.
      *
      * @param array $data
      * @return void
      */
-    public function process_local_reactforum_reactforum_reacted(array $data): void {
+    public function process_local_reactforum_local_reactforum_user_reactions(array $data): void {
         global $DB;
         $record = (object) $data;
         $record->userid = $this->get_mappingid('user', $record->userid);
         $record->post = $this->get_mappingid('forum_post', $record->post);
-        $record->reaction = $this->get_mappingid($this->get_namefor('reactforum_button'), $record->reaction);
+        $record->reaction = $this->get_mappingid($this->get_namefor('local_reactforum_reactions'), $record->reaction);
         if ($record->userid && $record->post && $record->reaction) {
-            $DB->insert_record('reactforum_reacted', $record);
+            $DB->insert_record('local_reactforum_user_reactions', $record);
         }
     }
 
@@ -105,6 +105,6 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
      * @return void
      */
     protected function after_execute_module(): void {
-        $this->add_related_files('local_reactforum', 'reactions', $this->get_namefor('reactforum_button'));
+        $this->add_related_files('local_reactforum', 'reactions', $this->get_namefor('local_reactforum_reactions'));
     }
 }

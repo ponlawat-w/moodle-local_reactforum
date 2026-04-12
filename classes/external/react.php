@@ -66,7 +66,7 @@ class react extends external_api {
         );
 
         $post = $DB->get_record('forum_posts', ['id' => $postid], '*', MUST_EXIST);
-        $reaction = $DB->get_record('reactforum_buttons', ['id' => $reactionid], '*', MUST_EXIST);
+        $reaction = $DB->get_record('local_reactforum_reactions', ['id' => $reactionid], '*', MUST_EXIST);
         $discussion = $DB->get_record('forum_discussions', ['id' => $post->discussion], '*', MUST_EXIST);
         $forum = $DB->get_record('forum', ['id' => $discussion->forum], '*', MUST_EXIST);
         $course = get_course($forum->course);
@@ -82,47 +82,47 @@ class react extends external_api {
         /** @var \core\context\module $context */
         $context;
 
-        $reactionmetadata = local_reactforum_getreactionmetadata($forum->id, $discussion->id);
-        if (!$reactionmetadata) {
-            $reactionmetadata = local_reactforum_getreactionmetadata($forum->id);
+        $reactionsetting = local_reactforum_getreactionsetting($forum->id, $discussion->id);
+        if (!$reactionsetting) {
+            $reactionsetting = local_reactforum_getreactionsetting($forum->id);
         }
-        if (!$reactionmetadata) {
+        if (!$reactionsetting) {
             throw new \core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
         }
 
         if ($post->userid == $USER->id) {
             throw new \core\exception\moodle_exception('error_cannotreactownpost', 'local_reactforum');
         }
-        if (!$reactionmetadata->reactionallreplies && $discussion->firstpost != $post->id) {
+        if (!$reactionsetting->reactionallreplies && $discussion->firstpost != $post->id) {
             throw new \core\exception\moodle_exception('error_repliesnotallowed', 'local_reactforum');
         }
 
-        $userreaction = $DB->get_record('reactforum_reacted', ['post' => $post->id, 'userid' => $USER->id]);
+        $userreaction = $DB->get_record('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]);
 
         if (!$userreaction) {
             // First reaction on this post.
-            $newreaction = new \stdClass();
-            $newreaction->post = $post->id;
-            $newreaction->reaction = $reaction->id;
-            $newreaction->userid = $USER->id;
-            $DB->delete_records('reactforum_reacted', ['post' => $post->id, 'userid' => $USER->id]);
-            $newid = $DB->insert_record('reactforum_reacted', $newreaction);
+            $newuserreaction = new \stdClass();
+            $newuserreaction->post = $post->id;
+            $newuserreaction->reaction = $reaction->id;
+            $newuserreaction->userid = $USER->id;
+            $DB->delete_records('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]);
+            $newid = $DB->insert_record('local_reactforum_user_reactions', $newuserreaction);
             \local_reactforum\event\reaction_created::createfromreacted($newid, $post->id, $context)->trigger();
-        } else if (!$reactionmetadata->changeable) {
+        } else if (!$reactionsetting->changeable) {
             throw new \core\exception\moodle_exception('error_reactionnotchangeable', 'local_reactforum');
         } else if ($userreaction->reaction == $reaction->id) {
             // Toggle off — same button clicked again.
-            $DB->delete_records('reactforum_reacted', ['post' => $post->id, 'userid' => $USER->id]);
+            $DB->delete_records('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]);
             \local_reactforum\event\reaction_deleted::createfromreacted($userreaction->id, $post->id, $context)->trigger();
         } else {
             // Switch to a different reaction.
             $userreaction->reaction = $reaction->id;
-            $DB->update_record('reactforum_reacted', $userreaction);
+            $DB->update_record('local_reactforum_user_reactions', $userreaction);
             \local_reactforum\event\reaction_created::createfromreacted($userreaction->id, $post->id, $context)->trigger();
         }
 
         // Build and return updated per-post reaction state.
-        $postreactions = local_reactforum_getpostreactionsdata($reactionmetadata, $post->id);
+        $postreactions = local_reactforum_getpostreactionsdata($reactionsetting, $post->id);
         $result = [];
         foreach ($postreactions as $rid => $state) {
             $result[] = [
