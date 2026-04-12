@@ -94,21 +94,7 @@ if ($discussion) {
     $PAGE->navbar->add($discussion->name, new \core\url('/mod/forum/discuss.php', ['d' => $discussion->id]));
 }
 
-$PAGE->requires->css('/local/reactforum/styles.css');
-$PAGE->requires->strings_for_js([
-    'reactionstype_change_confirmation',
-    'reactions_add',
-    'reactions_changeimage',
-    'reactions_selectfile',
-    'reactions_cancel',
-    'reactions_delete',
-    'reactions_delete_confirmation',
-    'reactions_reupload',
-    'description',
-], 'local_reactforum');
-$reactionsetting = isset($reactionsetting) ? $reactionsetting : null;
-$reactionsdata = local_reactforum_getreactionsjson($forum->id, $discussion ? $discussion->id : null, $reactionsetting);
-$PAGE->requires->js_call_amd('local_reactforum/managereactions', 'init', [$reactionsdata]);
+local_reactforum_requirejsformanagereactions($forum->id, $discussion ? $discussion->id : null);
 
 echo $OUTPUT->header();
 $form->display();

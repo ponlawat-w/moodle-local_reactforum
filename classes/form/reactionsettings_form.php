@@ -75,38 +75,7 @@ class reactionsettings_form extends \moodleform {
 
         $reactionsetting = local_reactforum_getreactionsetting($this->forumid, $this->discussionid);
 
-        $radioarray = [
-            $mform->createElement('radio', 'reactiontype', '', get_string('reactionstype_none', 'local_reactforum'), 'none'),
-            $mform->createElement('radio', 'reactiontype', '', get_string('reactionstype_text', 'local_reactforum'), 'text'),
-            $mform->createElement('radio', 'reactiontype', '', get_string('reactionstype_image', 'local_reactforum'), 'image'),
-        ];
-        if (!$this->discussionid) {
-            $radioarray[] = $mform->createElement(
-                'radio',
-                'reactiontype',
-                '',
-                get_string('reactionstype_discussion', 'local_reactforum'),
-                'discussion'
-            );
-        }
-        $mform->addGroup($radioarray, 'reactiontype', get_string('reactionstype', 'local_reactforum'), ['<br>'], false);
-        $mform->setDefault('reactiontype', $reactionsetting ? $reactionsetting->reactiontype : 'none');
-
-        $mform->addGroup([], 'reactions', get_string('reactionsbuttons', 'local_reactforum'), ['<br>'], false);
-
-        $mform->addElement('filepicker', 'reactionimage', '', null, ['maxbytes' => 0, 'accepted_types' => ['image']]);
-
-        $mform->addElement('checkbox', 'reactionallreplies', get_string('reactions_allreplies', 'local_reactforum'));
-        $mform->addHelpButton('reactionallreplies', 'reactions_allreplies', 'local_reactforum');
-        $mform->setDefault('reactionallreplies', $reactionsetting ? ($reactionsetting->reactionallreplies ? true : false) : false);
-
-        $mform->addElement('checkbox', 'delayedcounter', get_string('reactions_delayedcounter', 'local_reactforum'));
-        $mform->addHelpButton('delayedcounter', 'reactions_delayedcounter', 'local_reactforum');
-        $mform->setDefault('delayedcounter', $reactionsetting && $reactionsetting->delayedcounter ? true : false);
-
-        $mform->addElement('checkbox', 'changeable', get_string('reactions_changeable', 'local_reactforum'));
-        $mform->addHelpButton('changeable', 'reactions_changeable', 'local_reactforum');
-        $mform->setDefault('changeable', $reactionsetting ? ($reactionsetting->changeable ? true : false) : true);
+        local_reactforum_applytoform($mform, $reactionsetting, !$this->discussionid);
 
         $mform->addElement('hidden', 'f');
         $mform->setDefault('f', $this->forumid);
@@ -119,166 +88,17 @@ class reactionsettings_form extends \moodleform {
     }
 
     /**
-     * Updates or creates the setting record for this forum/discussion.
-     *
-     * @return void
-     */
-    private function setsetting(): void {
-        global $DB;
-        $data = $this->get_data();
-        $reactionsetting = local_reactforum_getreactionsetting($this->forumid, $this->discussionid);
-        if ($reactionsetting) {
-            $reactionsetting->reactiontype = $data->reactiontype;
-            $reactionsetting->reactionallreplies = isset($data->reactionallreplies) ? $data->reactionallreplies : 0;
-            $reactionsetting->delayedcounter = isset($data->delayedcounter) ? $data->delayedcounter : 0;
-            $reactionsetting->changeable = isset($data->changeable) ? $data->changeable : 0;
-            if (!$DB->update_record('local_reactforum_settings', $reactionsetting)) {
-                throw new \core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
-            }
-            return;
-        }
-        $reactionsetting = new \stdClass();
-        $reactionsetting->forum = $this->forumid;
-        $reactionsetting->discussion = $this->discussionid;
-        $reactionsetting->reactiontype = $data->reactiontype;
-        $reactionsetting->reactionallreplies = $data->reactionallreplies ?? 0;
-        $reactionsetting->delayedcounter = $data->delayedcounter ?? 0;
-        $reactionsetting->changeable = $data->changeable ?? 0;
-        if (!$DB->insert_record('local_reactforum_settings', $reactionsetting)) {
-            throw new \core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
-        }
-    }
-
-    /**
      * Processes the submitted form data and updates the database.
      *
      * @param \context_module|null $modcontext
      * @return bool true on success
      */
     public function process($modcontext = null): bool {
-        global $DB;
-        if (!$modcontext) {
-            $modcontext = local_reactforum_getmodcontextfromforumid($this->forumid);
-        }
-        $data = $this->get_data();
-
-        $reactionsetting = local_reactforum_getreactionsetting($this->forumid, $this->discussionid);
-
-        if ($reactionsetting && $data->reactiontype !== $reactionsetting->reactiontype) {
-            $reactions = $DB->get_records(
-                'local_reactforum_reactions',
-                ['forum' => $this->forumid, 'discussion' => $this->discussionid]
-            );
-            foreach ($reactions as $reaction) {
-                local_reactforum_removereaction($reaction->id);
-            }
-            $DB->delete_records('local_reactforum_settings', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
-
-            if (!$this->discussionid) {
-                $reactions = $DB->get_records('local_reactforum_reactions', ['forum' => $this->forumid]);
-                foreach ($reactions as $reaction) {
-                    local_reactforum_removereaction($reaction->id);
-                }
-                $DB->delete_records('local_reactforum_settings', ['forum' => $this->forumid]);
-            }
-        }
-
-        $this->setsetting();
-
-        $fs = get_file_storage();
-
-        // New text reactions.
-        $newreactions = optional_param_array('reactions_new', [], PARAM_TEXT);
-        if ($data->reactiontype === 'text' && $newreactions) {
-            foreach ($newreactions as $reactiontxt) {
-                $reactiontxt = trim($reactiontxt);
-                if ($reactiontxt === '') {
-                    continue;
-                }
-                $reaction = new \stdClass();
-                $reaction->forum = $this->forumid;
-                $reaction->discussion = $this->discussionid;
-                $reaction->reaction = $reactiontxt;
-                if (!$DB->insert_record('local_reactforum_reactions', $reaction)) {
-                    throw new \core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
-                }
-            }
-        }
-
-        // New image reactions (temp file ids submitted by JS).
-        $newimages = optional_param_array('reactions_new_image', [], PARAM_INT);
-        if ($data->reactiontype === 'image' && $newimages) {
-            $descsnew = optional_param_array('reactions_desc_new', [], PARAM_TEXT);
-            foreach ($newimages as $fileid) {
-                $description = $descsnew[$fileid] ?? '';
-                $reaction = new \stdClass();
-                $reaction->forum = $this->forumid;
-                $reaction->discussion = $this->discussionid;
-                $reaction->reaction = $description;
-                $reactionid = $DB->insert_record('local_reactforum_reactions', $reaction);
-                if (!$reactionid) {
-                    throw new \core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
-                }
-                $tempfile = $fs->get_file_by_id($fileid);
-                if ($tempfile && !local_reactforum_savetemp($fs, $modcontext->id, $tempfile, $reactionid)) {
-                    throw new \core\exception\moodle_exception('error_invalidreaction', 'local_reactforum');
-                }
-            }
-            local_reactforum_cleartemp($fs);
-        }
-
-        // Edit existing text reactions.
-        $editreactions = optional_param_array('reactions_edit', [], PARAM_TEXT);
-        if ($data->reactiontype === 'text' && $editreactions) {
-            foreach ($editreactions as $reactionid => $reaction) {
-                if (trim($reaction) === '') {
-                    continue;
-                }
-                $reactionobj = new \stdClass();
-                $reactionobj->id = clean_param($reactionid, PARAM_INT);
-                $reactionobj->reaction = $reaction;
-                $DB->update_record('local_reactforum_reactions', $reactionobj);
-            }
-        }
-
-        // Edit existing image reactions (replace image and/or description).
-        $editimages = optional_param_array('reactions_edit_image', [], PARAM_INT);
-        if ($data->reactiontype === 'image' && $editimages) {
-            foreach ($editimages as $reactionid => $filetempid) {
-                $reactionid = clean_param($reactionid, PARAM_INT);
-                if ($filetempid > 0) {
-                    $tempfile = $fs->get_file_by_id($filetempid);
-                    if ($tempfile) {
-                        local_reactforum_savetemp($fs, $modcontext->id, $tempfile, $reactionid);
-                    }
-                }
-            }
-            $descedit = optional_param_array('reactions_desc_edit', [], PARAM_TEXT);
-            foreach ($descedit as $reactionid => $newdescription) {
-                $reactionobj = new \stdClass();
-                $reactionobj->id = clean_param($reactionid, PARAM_INT);
-                $reactionobj->reaction = $newdescription;
-                $DB->update_record('local_reactforum_reactions', $reactionobj);
-            }
-        }
-
-        // Delete reactions.
-        $deletereactions = optional_param_array('reactions_delete', [], PARAM_INT);
-        foreach ($deletereactions as $reactionid) {
-            local_reactforum_removereaction($reactionid);
-        }
-
-        if ($data->reactiontype === 'none') {
-            $reactions = $DB->get_records(
-                'local_reactforum_reactions',
-                ['forum' => $this->forumid, 'discussion' => $this->discussionid]
-            );
-            foreach ($reactions as $reaction) {
-                local_reactforum_removereaction($reaction->id);
-            }
-            $DB->delete_records('local_reactforum_settings', ['forum' => $this->forumid, 'discussion' => $this->discussionid]);
-        }
-
-        return true;
+        return local_reactforum_processreactionsdata(
+            $this->forumid,
+            $this->discussionid,
+            $this->get_data(),
+            $modcontext
+        );
     }
 }
