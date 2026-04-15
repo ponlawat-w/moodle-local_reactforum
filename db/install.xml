@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/reactforum/db" VERSION="20230508" COMMENT="XMLDB file for Moodle local/reactforum"
+<XMLDB PATH="local/reactforum/db" VERSION="20260411" COMMENT="XMLDB file for Moodle local/reactforum"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="reactforum_metadata" COMMENT="Type of reaction">
+    <TABLE NAME="local_reactforum_settings" COMMENT="Type of reaction">
       <FIELDS>
         <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
         <FIELD NAME="forum" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false"/>
@@ -20,7 +20,7 @@
         <KEY NAME="discussion" TYPE="foreign" FIELDS="discussion" REFTABLE="forum_discussions" REFFIELDS="id"/>
       </KEYS>
     </TABLE>
-    <TABLE NAME="reactforum_buttons" COMMENT="All reaction buttons in each forum or discussion">
+    <TABLE NAME="local_reactforum_reactions" COMMENT="All reaction buttons in each forum or discussion">
       <FIELDS>
         <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
         <FIELD NAME="forum" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="false"/>
@@ -37,7 +37,7 @@
         <INDEX NAME="discussion" UNIQUE="false" FIELDS="discussion"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="reactforum_reacted" COMMENT="All reacted records from each user in every posts">
+    <TABLE NAME="local_reactforum_userreactions" COMMENT="All reacted records from each user in every posts">
       <FIELDS>
         <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
         <FIELD NAME="userid" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
@@ -47,7 +47,6 @@
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
         <KEY NAME="post" TYPE="foreign" FIELDS="post" REFTABLE="forum_posts" REFFIELDS="id"/>
-        <KEY NAME="reaction" TYPE="foreign" FIELDS="reaction" REFTABLE="reactforum_reactions" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>

@@ -15,17 +15,40 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Hook callbacks for local_reactforum.
  *
  * @package     local_reactforum
  * @copyright   2026 Ponlawat Weerapanpisit <ponlawat_w@outlook.co.th>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_reactforum;
+
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_reactforum';
-$plugin->version = 2026041200;
-$plugin->requires = 2024042200;
-$plugin->release = '3.0.0';
-$plugin->maturity = MATURITY_STABLE;
+require_once(__DIR__ . '/../lib.php');
+
+/**
+ * Hook callbacks
+ */
+class hookcallbacks {
+    /**
+     * Initialises forum reactions on discussion pages.
+     *
+     * @param \core\hook\output\before_http_headers $payload
+     * @return void
+     */
+    public static function output_before_http_headers(\core\hook\output\before_http_headers $payload): void {
+        global $PAGE;
+        /** @var \moodle_page $PAGE */
+        $PAGE;
+        if ($PAGE->url->get_path() !== '/mod/forum/discuss.php') {
+            return;
+        }
+        $discussionid = optional_param('d', 0, PARAM_INT);
+        if (!$discussionid) {
+            return;
+        }
+        local_reactforum_initreactions();
+    }
+}
