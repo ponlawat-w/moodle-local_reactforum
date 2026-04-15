@@ -31,7 +31,9 @@ $string['error_cannotreactownpost'] = 'Cannot react to your own post';
 $string['error_draftnotfound'] = 'Draft file not found';
 $string['error_invaliddiscussion'] = 'Invalid discussion ID';
 $string['error_invalidforum'] = 'Invalid forum ID';
+$string['error_invalidparams'] = 'Invalid parameters';
 $string['error_invalidreaction'] = 'Invalid reaction ID';
+$string['error_invalidreactiontype'] = 'Invalid reaction type';
 $string['error_reactionnotchangeable'] = 'Reactions cannot be changed';
 $string['error_repliesnotallowed'] = 'Reactions on replies are not enabled';
 

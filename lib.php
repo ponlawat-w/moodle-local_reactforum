@@ -83,6 +83,8 @@ function local_reactforum_applytoform(
  */
 function local_reactforum_requirejsformanagereactions(?int $forumid, ?int $discussionid) {
     global $PAGE;
+    /** @var \moodle_page $PAGE */
+    $PAGE;
     $PAGE->requires->css('/local/reactforum/styles.css');
     $PAGE->requires->strings_for_js([
         'reactionstype_change_confirmation',
@@ -119,6 +121,8 @@ function local_reactforum_processreactionsdata(
     ?\context_module $modcontext = null
 ): bool {
     global $DB;
+    /** @var \moodle_database $DB */
+    $DB;
 
     if (!$modcontext) {
         $modcontext = local_reactforum_getmodcontextfromforumid($forumid);
@@ -340,6 +344,8 @@ function local_reactforum_caneditdiscussion($discussion, $modcontext) {
  */
 function local_reactforum_getreactionsetting($forumid = null, $discussionid = null) {
     global $DB;
+    /** @var \moodle_database $DB */
+    $DB;
     if ($discussionid) {
         return $DB->get_record('local_reactforum_settings', ['discussion' => $discussionid]);
     }
@@ -359,6 +365,8 @@ function local_reactforum_getreactionsetting($forumid = null, $discussionid = nu
  */
 function local_reactforum_getreactionsjson($forumid, $discussionid, $reactionsetting = null) {
     global $DB;
+    /** @var \moodle_database $DB */
+    $DB;
     if (!$reactionsetting) {
         $reactionsetting = local_reactforum_getreactionsetting($forumid, $discussionid);
     }
@@ -465,6 +473,8 @@ function local_reactforum_getmodcontextfromforum($forum) {
  */
 function local_reactforum_getmodcontextfromforumid($forumid) {
     global $DB;
+    /** @var \moodle_database $DB */
+    $DB;
     $forum = $DB->get_record('forum', ['id' => $forumid]);
     if (!$forum) {
         throw new core\exception\moodle_exception('error_invalidforum', 'local_reactforum');
@@ -480,6 +490,8 @@ function local_reactforum_getmodcontextfromforumid($forumid) {
  */
 function local_reactforum_removereaction($reactionid) {
     global $DB;
+    /** @var \moodle_database $DB */
+    $DB;
 
     $reaction = $DB->get_record('local_reactforum_reactions', ['id' => $reactionid]);
     if (!$reaction) {
@@ -519,6 +531,8 @@ function local_reactforum_removereaction($reactionid) {
  */
 function local_reactforum_getpostreactiondata($reactionsetting, $postid, $reactionid, $reactedpost, $postuser) {
     global $DB, $USER;
+    /** @var \moodle_database $DB */
+    $DB;
     $result = new stdClass();
     $result->reacted = $DB->count_records(
         'local_reactforum_userreactions',
@@ -544,6 +558,8 @@ function local_reactforum_getpostreactiondata($reactionsetting, $postid, $reacti
  */
 function local_reactforum_getpostreactionsdata($reactionsetting, $postid) {
     global $DB, $USER;
+    /** @var \moodle_database $DB */
+    $DB;
     $reactions = $DB->get_records(
         'local_reactforum_reactions',
         [
@@ -579,6 +595,8 @@ function local_reactforum_getpostreactionsdata($reactionsetting, $postid) {
  */
 function local_reactforum_getdiscussionreactionsdata($discussionid) {
     global $DB;
+    /** @var \moodle_database $DB */
+    $DB;
     $discussion = $DB->get_record('forum_discussions', ['id' => $discussionid]);
     if (!$discussion) {
         throw new core\exception\moodle_exception('error_invaliddiscussion', 'local_reactforum');
@@ -648,6 +666,8 @@ function local_reactforum_pluginfile($course, $cm, $context, $filearea, $args, $
  */
 function local_reactforum_initreactions() {
     global $PAGE;
+    /** @var \moodle_page $PAGE */
+    $PAGE;
     $PAGE->requires->css('/local/reactforum/styles.css');
     $PAGE->requires->strings_for_js(['reactions'], 'local_reactforum');
     $PAGE->requires->js_call_amd('local_reactforum/reactions', 'init', [required_param('d', PARAM_INT)]);

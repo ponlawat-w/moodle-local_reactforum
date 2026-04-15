@@ -55,6 +55,8 @@ class reactionsettings_form extends \moodleform {
      */
     public function __construct($forumid = null, $discussionid = null) {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
         $this->forumid = $forumid;
         $this->discussionid = $discussionid;
         if ($this->discussionid) {

@@ -29,7 +29,7 @@ $forumid = optional_param('f', 0, PARAM_INT);
 $discussionid = optional_param('d', 0, PARAM_INT);
 
 if (!$forumid && !$discussionid) {
-    throw new core\exception\moodle_exception('Invalid parameters');
+    throw new core\exception\moodle_exception('error_invalidparams', 'local_reactforum');
 }
 
 $PAGE->set_url('/local/reactforum/managereactions.php', ['f' => $forumid, 'd' => $discussionid]);
@@ -39,7 +39,7 @@ if ($discussion) {
     $forumid = $discussion->forum;
     $reactionsetting = local_reactforum_getreactionsetting($forumid);
     if ($reactionsetting && $reactionsetting->reactiontype != 'discussion') {
-        throw new core\exception\moodle_exception('Invalid reaction type');
+        throw new core\exception\moodle_exception('error_invalidreactiontype', 'local_reactforum');
     }
 }
 

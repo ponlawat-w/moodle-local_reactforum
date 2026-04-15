@@ -57,6 +57,8 @@ class get_discussion_reactions extends external_api {
      */
     public static function execute(int $discussionid): ?array {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
 
         ['discussionid' => $discussionid] = self::validate_parameters(
             self::execute_parameters(),

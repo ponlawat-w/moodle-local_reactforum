@@ -40,6 +40,8 @@ class hookcallbacks {
      */
     public static function output_before_http_headers(\core\hook\output\before_http_headers $payload): void {
         global $PAGE;
+        /** @var \moodle_page $PAGE */
+        $PAGE;
         if ($PAGE->url->get_path() !== '/mod/forum/discuss.php') {
             return;
         }

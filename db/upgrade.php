@@ -30,6 +30,8 @@
  */
 function xmldb_local_reactforum_upgrade($oldversion) {
     global $DB;
+    /** @var \moodle_database $DB */
+    $DB;
 
     $dbman = $DB->get_manager();
 

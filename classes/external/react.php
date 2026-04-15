@@ -59,6 +59,8 @@ class react extends external_api {
      */
     public static function execute(int $postid, int $reactionid): array {
         global $DB, $USER;
+        /** @var \moodle_database $DB */
+        $DB;
 
         ['postid' => $postid, 'reactionid' => $reactionid] = self::validate_parameters(
             self::execute_parameters(),

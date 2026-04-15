@@ -26,7 +26,6 @@
  * Restore plugin class for local_reactforum.
  */
 class restore_local_reactforum_plugin extends restore_local_plugin {
-
     /**
      * @var array<int, int|null> Map of new local_reactforum_settings ID => old discussion ID (null if none).
      *                           forum and discussion are both resolved in after_restore_module().
@@ -83,6 +82,8 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
      */
     public function process_setting(array $data): void {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
         if ($this->task->get_modulename() !== 'forum') {
             return;
         }
@@ -105,6 +106,8 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
      */
     public function process_reaction(array $data): void {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
         if ($this->task->get_modulename() !== 'forum') {
             return;
         }
@@ -129,6 +132,8 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
      */
     public function process_userreaction(array $data): void {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
         $record = (object) $data;
         $record->userid = $this->get_mappingid('user', $record->userid);
         $oldpostid = $record->post;
@@ -149,6 +154,8 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
      */
     protected function after_restore_module(): void {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
 
         $newforumid = $this->task->get_activityid();
 
@@ -157,9 +164,12 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
             if (!$olddiscussionid) {
                 continue;
             }
-            $DB->set_field('local_reactforum_settings', 'discussion',
+            $DB->set_field(
+                'local_reactforum_settings',
+                'discussion',
                 $olddiscussionid ? $this->get_mappingid('forum_discussion', $olddiscussionid) : null,
-                ['id' => $settingid]);
+                ['id' => $settingid],
+            );
         }
 
         // By this point process_activity() has run, so get_old_contextid() is the real old context.
@@ -168,9 +178,12 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
         foreach ($this->insertedreactionids as $reactionid => $info) {
             $DB->set_field('local_reactforum_reactions', 'forum', $newforumid, ['id' => $reactionid]);
             if ($info['olddiscussionid']) {
-                $DB->set_field('local_reactforum_reactions', 'discussion',
+                $DB->set_field(
+                    'local_reactforum_reactions',
+                    'discussion',
                     $this->get_mappingid('forum_discussion', $info['olddiscussionid']),
-                    ['id' => $reactionid]);
+                    ['id' => $reactionid],
+                );
             }
             // Re-register the mapping with $restorefiles=true and the now-correct old context ID,
             // so send_files_to_pool can match files via the parentitemid = f.contextid JOIN.
@@ -178,9 +191,12 @@ class restore_local_reactforum_plugin extends restore_local_plugin {
         }
 
         foreach ($this->inserteduserreactionids as $userreactionid => $oldpostid) {
-            $DB->set_field('local_reactforum_userreactions', 'post',
+            $DB->set_field(
+                'local_reactforum_userreactions',
+                'post',
                 $this->get_mappingid('forum_post', $oldpostid),
-                ['id' => $userreactionid]);
+                ['id' => $userreactionid],
+            );
         }
 
         $this->add_related_files('local_reactforum', 'reactions', 'reaction');

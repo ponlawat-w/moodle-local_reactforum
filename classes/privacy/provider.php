@@ -111,6 +111,8 @@ class provider implements
      */
     public static function export_user_data(approved_contextlist $contextlist): void {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
         $userid = $contextlist->get_user()->id;
 
         foreach ($contextlist->get_contexts() as $context) {
@@ -144,6 +146,8 @@ class provider implements
      */
     public static function delete_data_for_all_users_in_context(\core\context $context): void {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
         if (!($context instanceof \context_module)) {
             return;
         }
@@ -168,6 +172,8 @@ class provider implements
      */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
         $userid = $contextlist->get_user()->id;
 
         foreach ($contextlist->get_contexts() as $context) {
@@ -197,6 +203,8 @@ class provider implements
      */
     public static function delete_data_for_users(approved_userlist $userlist): void {
         global $DB;
+        /** @var \moodle_database $DB */
+        $DB;
         $context = $userlist->get_context();
         if (!($context instanceof \context_module)) {
             return;
