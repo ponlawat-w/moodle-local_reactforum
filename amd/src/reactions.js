@@ -186,7 +186,7 @@ export const init = (discussionid) => {
                     .attr('href', `${M.cfg.wwwroot}/local/reactforum/managereactions.php?d=${discussionid}`)
                     .attr('role', 'menuitem')
                     .addClass('btn btn-link')
-                    .html(M.str.local_reactforum.reactions)
+                    .html(M.util.get_string('reactions', 'local_reactforum'))
         );
     };
 

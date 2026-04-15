@@ -32,7 +32,9 @@ export const init = currentreactionsjsonstr => {
         let $delayedcounter = $('div#fitem_id_delayedcounter');
 
         let editid = 0;
-        const seteditid = x => { editid = x; };
+        const seteditid = x => {
+            editid = x;
+        };
 
         $filepicker.hide();
 
@@ -42,7 +44,7 @@ export const init = currentreactionsjsonstr => {
         /**
          * Renders the text-reactions editing UI.
          */
-        const prepare_text_reactions = function() {
+        const prepareTextReactions = function() {
             if (reactiontype !== 'text') {
                 return;
             }
@@ -54,8 +56,8 @@ export const init = currentreactionsjsonstr => {
             const $deletebtn = $('<button>')
                 .attr('type', 'button')
                 .attr('class', 'btn btn-danger')
-                .html(M.str.local_reactforum.reactions_delete);
-            const $reactioninputs_div = $('<div>').attr('class', 'reaction-input')
+                .html(M.util.get_string('reactions_delete', 'local_reactforum'));
+            const $reactioninputsDiv = $('<div>').attr('class', 'reaction-input')
                 .append($reactioninput)
                 .append($deletebtn);
 
@@ -64,27 +66,28 @@ export const init = currentreactionsjsonstr => {
             const $addbtn = $('<button>')
                 .attr('type', 'button')
                 .attr('class', 'btn btn-primary')
-                .html(M.str.local_reactforum.reactions_add);
+                .html(M.util.get_string('reactions_add', 'local_reactforum'));
 
             $addbtn.on('click', function() {
-                const $newelement = $reactioninputs_div.clone(true, true);
+                const $newelement = $reactioninputsDiv.clone(true, true);
                 $newelement.find('input.reaction-text').val('');
                 $inputcontainer.append($newelement);
                 $newelement.find('input.reaction-text').trigger('focus');
             });
 
             $deletebtn.on('click', function() {
-                const reaction_id = $(this).siblings('input.reaction-text').attr('reaction-id');
+                const reactionId = $(this).siblings('input.reaction-text').attr('reaction-id');
 
-                if (reaction_id !== '0' && !confirm(M.str.local_reactforum.reactions_delete_confirmation)) {
+                // eslint-disable-next-line no-alert
+                if (reactionId !== '0' && !confirm(M.util.get_string('reactions_delete_confirmation', 'local_reactforum'))) {
                     return;
                 }
 
-                if (reaction_id !== '0') {
+                if (reactionId !== '0') {
                     $(this).siblings('input.reaction-text')
                         .attr('type', 'hidden')
                         .attr('name', 'reactions_delete[]')
-                        .val(reaction_id);
+                        .val(reactionId);
                     $(this).closest('div.reaction-input').hide();
                 } else {
                     $(this).closest('div.reaction-input').remove();
@@ -102,7 +105,7 @@ export const init = currentreactionsjsonstr => {
                 $inputcontainer.html('');
 
                 for (const reaction of reactions) {
-                    const $newelement = $reactioninputs_div.clone(true, true);
+                    const $newelement = $reactioninputsDiv.clone(true, true);
                     $newelement.find('input.reaction-text')
                         .attr('reaction-id', reaction.id)
                         .val(reaction.value);
@@ -125,7 +128,7 @@ export const init = currentreactionsjsonstr => {
         /**
          * Renders the image-reactions editing UI.
          */
-        const prepare_image_reactions = function() {
+        const prepareImageReactions = function() {
             if (reactiontype !== 'image') {
                 return;
             }
@@ -133,17 +136,17 @@ export const init = currentreactionsjsonstr => {
             $area.html('');
 
             const $input = $('input#id_reactionimage');
-            const $temp_element = $input.prev().find('div.filepicker-filelist div.filepicker-filename');
-            const temp_html = $temp_element.html();
+            const $tempElement = $input.prev().find('div.filepicker-filelist div.filepicker-filename');
+            const tempHtml = $tempElement.html();
             editid = 0;
 
             const $editheader = $('<h4/>');
-            $editheader.html(M.str.local_reactforum.reactions_selectfile)
+            $editheader.html(M.util.get_string('reactions_selectfile', 'local_reactforum'))
                 .addClass('reaction-img-edit')
                 .hide();
 
             const $cancelbtn = $('<button>');
-            $cancelbtn.html(M.str.local_reactforum.reactions_cancel)
+            $cancelbtn.html(M.util.get_string('reactions_cancel', 'local_reactforum'))
                 .attr('type', 'button')
                 .attr('class', 'reaction-img-edit btn btn-default')
                 .css('margin', '0 5px')
@@ -181,12 +184,12 @@ export const init = currentreactionsjsonstr => {
 
                         const $descriptioninput = $('<input>')
                             .attr('type', 'text')
-                            .attr('placeholder', M.str.local_reactforum.description)
+                            .attr('placeholder', M.util.get_string('description', 'local_reactforum'))
                             .attr('name', `reactions_desc_new[${tempfileid}]`)
                             .addClass('form-control');
 
                         const $deletebtn = $('<button>');
-                        $deletebtn.html(M.str.local_reactforum.reactions_delete)
+                        $deletebtn.html(M.util.get_string('reactions_delete', 'local_reactforum'))
                             .attr('type', 'button')
                             .attr('class', 'btn btn-danger')
                             .on('click', function() {
@@ -196,14 +199,14 @@ export const init = currentreactionsjsonstr => {
                         const $hiddenelement = $('<input type="hidden" name="reactions_new_image[]"/>');
                         $hiddenelement.addClass('reaction').val(tempfileid);
 
-                        const $reaction_div = $('<div/>');
-                        $reaction_div.attr('class', 'reaction-item')
+                        const $reactionDiv = $('<div/>');
+                        $reactionDiv.attr('class', 'reaction-item')
                             .append($newimg)
                             .append($descriptioninput)
                             .append($deletebtn)
                             .append($hiddenelement);
 
-                        $area.append($reaction_div);
+                        $area.append($reactionDiv);
                     } else if (editid > 0) {
                         // Replace existing reaction image.
                         const $editdiv = $area.find('div#reaction-item-' + editid);
@@ -220,7 +223,7 @@ export const init = currentreactionsjsonstr => {
                     // Silently fail — the image will not be uploaded.
                 });
 
-                $temp_element.html(temp_html);
+                $tempElement.html(tempHtml);
             });
 
             // Existing reactions.
@@ -232,7 +235,7 @@ export const init = currentreactionsjsonstr => {
 
                 const $descriptioninput = $('<input>')
                     .attr('type', 'text')
-                    .attr('placeholder', M.str.local_reactforum.description)
+                    .attr('placeholder', M.util.get_string('description', 'local_reactforum'))
                     .attr('name', `reactions_desc_edit[${reaction.id}]`)
                     .addClass('form-control')
                     .val(reaction.value);
@@ -241,7 +244,7 @@ export const init = currentreactionsjsonstr => {
                 $changebtn
                     .attr('type', 'button')
                     .attr('class', 'reaction-img-change-btn btn btn-outline-secondary')
-                    .html(M.str.local_reactforum.reactions_changeimage)
+                    .html(M.util.get_string('reactions_changeimage', 'local_reactforum'))
                     .on('click', function() {
                         $('.reaction-img-change-btn').prop('disabled', false);
                         $(this).prop('disabled', true);
@@ -250,11 +253,12 @@ export const init = currentreactionsjsonstr => {
                     });
 
                 const $deletebtn = $('<button>');
-                $deletebtn.html(M.str.local_reactforum.reactions_delete)
+                $deletebtn.html(M.util.get_string('reactions_delete', 'local_reactforum'))
                     .attr('type', 'button')
                     .attr('class', 'btn btn-danger')
                     .on('click', function() {
-                        if (confirm(M.str.local_reactforum.reactions_delete_confirmation)) {
+                        // eslint-disable-next-line no-alert
+                        if (confirm(M.util.get_string('reactions_delete_confirmation', 'local_reactforum'))) {
                             const $deletevalue = $('<input type="hidden"/>');
                             $deletevalue.attr('name', 'reactions_delete[]').val(reaction.id);
                             $area.append($deletevalue);
@@ -271,8 +275,8 @@ export const init = currentreactionsjsonstr => {
                     .addClass('reaction')
                     .val('0');
 
-                const $reaction_div = $('<div/>');
-                $reaction_div.addClass('reaction-item')
+                const $reactionDiv = $('<div/>');
+                $reactionDiv.addClass('reaction-item')
                     .attr('id', 'reaction-item-' + reaction.id)
                     .append($img)
                     .append($descriptioninput)
@@ -280,7 +284,7 @@ export const init = currentreactionsjsonstr => {
                     .append($deletebtn)
                     .append($edit);
 
-                $area.append($reaction_div);
+                $area.append($reactionDiv);
             }
 
             $filepicker.show();
@@ -290,13 +294,14 @@ export const init = currentreactionsjsonstr => {
             $filepicker.hide();
 
             if ($('input.reaction').length > 0 || reactiontype === 'discussion') {
-                if (!confirm(M.str.local_reactforum.reactionstype_change_confirmation)) {
+                // eslint-disable-next-line no-alert
+                if (!confirm(M.util.get_string('reactionstype_change_confirmation', 'local_reactforum'))) {
                     $(this).prop('checked', false);
                     $('input[name="reactiontype"][value="' + reactiontype + '"]').prop('checked', true);
                     if (reactiontype === 'image') {
                         $filepicker.show();
                     }
-                    return false;
+                    return;
                 }
             }
 
@@ -309,10 +314,10 @@ export const init = currentreactionsjsonstr => {
 
             if (reactiontype === 'text') {
                 reactions = [{id: '0', value: ''}];
-                prepare_text_reactions();
+                prepareTextReactions();
             } else if (reactiontype === 'image') {
                 reactions = [];
-                prepare_image_reactions();
+                prepareImageReactions();
             }
 
             if (reactiontype === 'none' || reactiontype === 'discussion') {
@@ -335,13 +340,13 @@ export const init = currentreactionsjsonstr => {
             $maindiv.hide();
             if (reactiontype === 'text') {
                 $('input#id_reactiontype_text').prop('checked', true);
-                prepare_text_reactions();
+                prepareTextReactions();
                 $maindiv.show();
                 $reactionallreplies.show();
                 $delayedcounter.show();
             } else if (reactiontype === 'image') {
                 $('input#id_reactiontype_image').prop('checked', true);
-                prepare_image_reactions();
+                prepareImageReactions();
                 $maindiv.show();
                 $reactionallreplies.show();
                 $delayedcounter.show();
