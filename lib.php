@@ -28,8 +28,8 @@
  * Shared by both the standalone managereactions form and the module settings injection.
  * Does NOT add a header, hidden fields, or action buttons — those are caller-specific.
  *
- * @param \MoodleQuickForm $mform
- * @param \stdClass|null $reactionsetting existing local_reactforum_settings record, or null
+ * @param \MoodleQuickForm $mform the form to add elements to
+ * @param \stdClass|false|null $reactionsetting existing local_reactforum_settings record, or null/false
  * @param bool $includediscussiontype whether to include the "discussion" radio option
  * @return void
  */
@@ -360,7 +360,7 @@ function local_reactforum_getreactionsetting($forumid = null, $discussionid = nu
  *
  * @param int $forumid
  * @param int|null $discussionid
- * @param stdClass|null $setting pre-fetched setting record (optional)
+ * @param stdClass|null $reactionsetting pre-fetched setting record (optional)
  * @return string JSON-encoded reactions array or null
  */
 function local_reactforum_getreactionsjson($forumid, $discussionid, $reactionsetting = null) {
@@ -522,7 +522,7 @@ function local_reactforum_removereaction($reactionid) {
 /**
  * Returns a data object describing one reaction button's state for one post.
  *
- * @param stdClass $setting local_reactforum_settings record
+ * @param stdClass $reactionsetting local_reactforum_settings record
  * @param int $postid
  * @param int $reactionid
  * @param bool $reactedpost whether the current user has already reacted on this post
@@ -552,7 +552,7 @@ function local_reactforum_getpostreactiondata($reactionsetting, $postid, $reacti
  *
  * Returns an empty array when reactions are not applicable for the post (e.g. reply).
  *
- * @param stdClass $setting local_reactforum_settings record
+ * @param stdClass $reactionsetting local_reactforum_settings record
  * @param int $postid
  * @return array<int, stdClass>
  */
