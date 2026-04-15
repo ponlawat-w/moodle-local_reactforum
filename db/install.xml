@@ -37,7 +37,7 @@
         <INDEX NAME="discussion" UNIQUE="false" FIELDS="discussion"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_reactforum_user_reactions" COMMENT="All reacted records from each user in every posts">
+    <TABLE NAME="local_reactforum_userreactions" COMMENT="All reacted records from each user in every posts">
       <FIELDS>
         <FIELD NAME="id" SEQUENCE="true" TYPE="int" LENGTH="10" NOTNULL="true"/>
         <FIELD NAME="userid" SEQUENCE="false" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>

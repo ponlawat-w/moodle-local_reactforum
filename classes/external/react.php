@@ -97,7 +97,7 @@ class react extends external_api {
             throw new \core\exception\moodle_exception('error_repliesnotallowed', 'local_reactforum');
         }
 
-        $userreaction = $DB->get_record('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]);
+        $userreaction = $DB->get_record('local_reactforum_userreactions', ['post' => $post->id, 'userid' => $USER->id]);
 
         if (!$userreaction) {
             // First reaction on this post.
@@ -105,19 +105,19 @@ class react extends external_api {
             $newuserreaction->post = $post->id;
             $newuserreaction->reaction = $reaction->id;
             $newuserreaction->userid = $USER->id;
-            $DB->delete_records('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]);
-            $newid = $DB->insert_record('local_reactforum_user_reactions', $newuserreaction);
+            $DB->delete_records('local_reactforum_userreactions', ['post' => $post->id, 'userid' => $USER->id]);
+            $newid = $DB->insert_record('local_reactforum_userreactions', $newuserreaction);
             \local_reactforum\event\reaction_created::createfromreacted($newid, $post->id, $context)->trigger();
         } else if (!$reactionsetting->changeable) {
             throw new \core\exception\moodle_exception('error_reactionnotchangeable', 'local_reactforum');
         } else if ($userreaction->reaction == $reaction->id) {
             // Toggle off — same button clicked again.
-            $DB->delete_records('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]);
+            $DB->delete_records('local_reactforum_userreactions', ['post' => $post->id, 'userid' => $USER->id]);
             \local_reactforum\event\reaction_deleted::createfromreacted($userreaction->id, $post->id, $context)->trigger();
         } else {
             // Switch to a different reaction.
             $userreaction->reaction = $reaction->id;
-            $DB->update_record('local_reactforum_user_reactions', $userreaction);
+            $DB->update_record('local_reactforum_userreactions', $userreaction);
             \local_reactforum\event\reaction_created::createfromreacted($userreaction->id, $post->id, $context)->trigger();
         }
 

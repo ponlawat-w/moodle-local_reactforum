@@ -33,7 +33,11 @@
  * @param bool $includediscussiontype whether to include the "discussion" radio option
  * @return void
  */
-function local_reactforum_applytoform(\MoodleQuickForm $mform, \stdClass|false|null $reactionsetting, bool $includediscussiontype = true) {
+function local_reactforum_applytoform(
+    \MoodleQuickForm $mform,
+    \stdClass|false|null $reactionsetting,
+    bool $includediscussiontype = true
+) {
     $radioarray = [
         $mform->createElement('radio', 'reactiontype', '', get_string('reactionstype_none', 'local_reactforum'), 'none'),
         $mform->createElement('radio', 'reactiontype', '', get_string('reactionstype_text', 'local_reactforum'), 'text'),
@@ -41,8 +45,11 @@ function local_reactforum_applytoform(\MoodleQuickForm $mform, \stdClass|false|n
     ];
     if ($includediscussiontype) {
         $radioarray[] = $mform->createElement(
-            'radio', 'reactiontype', '',
-            get_string('reactionstype_discussion', 'local_reactforum'), 'discussion'
+            'radio',
+            'reactiontype',
+            '',
+            get_string('reactionstype_discussion', 'local_reactforum'),
+            'discussion'
         );
     }
     $mform->addGroup($radioarray, 'reactiontype', get_string('reactionstype', 'local_reactforum'), ['<br>'], false);
@@ -374,8 +381,12 @@ function local_reactforum_getreactionsjson($forumid, $discussionid, $reactionset
             $file = reset($files);
             $value['imageurl'] = $file
                 ? \core\url::make_pluginfile_url(
-                    $context->id, 'local_reactforum', 'reactions',
-                    $reaction->id, '/', $file->get_filename()
+                    $context->id,
+                    'local_reactforum',
+                    'reactions',
+                    $reaction->id,
+                    '/',
+                    $file->get_filename()
                 )->out(false)
                 : null;
         }
@@ -485,7 +496,7 @@ function local_reactforum_removereaction($reactionid) {
         $file->delete();
     }
 
-    if (!$DB->delete_records('local_reactforum_user_reactions', ['reaction' => $reactionid])) {
+    if (!$DB->delete_records('local_reactforum_userreactions', ['reaction' => $reactionid])) {
         return false;
     }
 
@@ -510,12 +521,12 @@ function local_reactforum_getpostreactiondata($reactionsetting, $postid, $reacti
     global $DB, $USER;
     $result = new stdClass();
     $result->reacted = $DB->count_records(
-        'local_reactforum_user_reactions',
+        'local_reactforum_userreactions',
         ['post' => $postid, 'reaction' => $reactionid, 'userid' => $USER->id]
     ) > 0;
     $canseecounter = !$reactionsetting->delayedcounter || $reactedpost || $postuser == $USER->id;
     $result->count = $canseecounter
-        ? $DB->count_records('local_reactforum_user_reactions', ['post' => $postid, 'reaction' => $reactionid])
+        ? $DB->count_records('local_reactforum_userreactions', ['post' => $postid, 'reaction' => $reactionid])
         : null;
     $result->enabled = ($postuser != $USER->id) &&
         ($reactionsetting->changeable || (!$reactionsetting->changeable && !$reactedpost));
@@ -533,12 +544,18 @@ function local_reactforum_getpostreactiondata($reactionsetting, $postid, $reacti
  */
 function local_reactforum_getpostreactionsdata($reactionsetting, $postid) {
     global $DB, $USER;
-    $reactions = $DB->get_records('local_reactforum_reactions', ['forum' => $reactionsetting->forum, 'discussion' => $reactionsetting->discussion]);
+    $reactions = $DB->get_records(
+        'local_reactforum_reactions',
+        [
+            'forum' => $reactionsetting->forum,
+            'discussion' => $reactionsetting->discussion,
+        ]
+    );
     $post = $DB->get_record('forum_posts', ['id' => $postid]);
     if (!$reactionsetting->reactionallreplies && $post->parent) {
         return [];
     }
-    $reactedpost = $DB->count_records('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]) > 0;
+    $reactedpost = $DB->count_records('local_reactforum_userreactions', ['post' => $post->id, 'userid' => $USER->id]) > 0;
     $results = [];
     foreach ($reactions as $reaction) {
         $results[$reaction->id] = local_reactforum_getpostreactiondata(

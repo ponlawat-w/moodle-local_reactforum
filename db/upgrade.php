@@ -47,7 +47,7 @@ function xmldb_local_reactforum_upgrade($oldversion) {
         $renames = [
             'reactforum_metadata' => 'local_reactforum_settings',
             'reactforum_buttons' => 'local_reactforum_reactions',
-            'reactforum_reacted' => 'local_reactforum_user_reactions',
+            'reactforum_reacted' => 'local_reactforum_userreactions',
         ];
 
         foreach ($renames as $oldname => $newname) {

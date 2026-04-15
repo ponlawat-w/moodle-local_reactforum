@@ -59,16 +59,16 @@ if (!$reactionsetting->reactionallreplies && $discussion->firstpost != $post->id
     throw new \core\exception\moodle_exception('Cannot react to replies');
 }
 
-$userreaction = $DB->get_record('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id]);
+$userreaction = $DB->get_record('local_reactforum_userreactions', ['post' => $post->id, 'userid' => $USER->id]);
 if (!$userreaction) {
     $userreaction = new stdClass();
     $userreaction->post = $post->id;
     $userreaction->reaction = $reaction->id;
     $userreaction->userid = $USER->id;
-    if (!$DB->delete_records('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id])) {
+    if (!$DB->delete_records('local_reactforum_userreactions', ['post' => $post->id, 'userid' => $USER->id])) {
         throw new \core\exception\moodle_exception('Cannot clear reactions before reacting');
     }
-    if (!$DB->insert_record('local_reactforum_user_reactions', $userreaction)) {
+    if (!$DB->insert_record('local_reactforum_userreactions', $userreaction)) {
         throw new \core\exception\moodle_exception('Cannot react');
     }
     echo json_encode(local_reactforum_getpostreactionsdata($reactionsetting, $post->id));
@@ -78,14 +78,14 @@ if (!$reactionsetting->changeable) {
     throw new \core\exception\moodle_exception('Cannot change the reaction in a delayed counter type');
 }
 if ($userreaction->reaction == $reaction->id) {
-    if (!$DB->delete_records('local_reactforum_user_reactions', ['post' => $post->id, 'userid' => $USER->id])) {
+    if (!$DB->delete_records('local_reactforum_userreactions', ['post' => $post->id, 'userid' => $USER->id])) {
         throw new \core\exception\moodle_exception('Cannot clear reactions');
     }
     echo json_encode(local_reactforum_getpostreactionsdata($reactionsetting, $post->id));
     exit;
 }
 $userreaction->reaction = $reaction->id;
-if (!$DB->update_record('local_reactforum_user_reactions', $userreaction)) {
+if (!$DB->update_record('local_reactforum_userreactions', $userreaction)) {
     throw new \core\exception\moodle_exception('Cannot update reaction');
 }
 echo json_encode(local_reactforum_getpostreactionsdata($reactionsetting, $post->id));

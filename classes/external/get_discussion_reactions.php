@@ -100,8 +100,12 @@ class get_discussion_reactions extends external_api {
                 $file = reset($files);
                 $entry['imageurl'] = $file
                     ? \core\url::make_pluginfile_url(
-                        $context->id, 'local_reactforum', 'reactions',
-                        $reaction->id, '/', $file->get_filename()
+                        $context->id,
+                        'local_reactforum',
+                        'reactions',
+                        $reaction->id,
+                        '/',
+                        $file->get_filename()
                     )->out(false)
                     : '';
             }

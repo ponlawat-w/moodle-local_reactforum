@@ -32,7 +32,7 @@ use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 
 /**
- * Privacy provider — the plugin stores user reaction choices in local_reactforum_user_reactions.
+ * Privacy provider — the plugin stores user reaction choices in local_reactforum_userreactions.
  */
 class provider implements
     \core_privacy\local\metadata\provider,
@@ -46,13 +46,13 @@ class provider implements
      */
     public static function get_metadata(collection $collection): collection {
         $collection->add_database_table(
-            'local_reactforum_user_reactions',
+            'local_reactforum_userreactions',
             [
-                'userid' => 'privacy:metadata:local_reactforum_user_reactions:userid',
-                'post' => 'privacy:metadata:local_reactforum_user_reactions:post',
-                'reaction' => 'privacy:metadata:local_reactforum_user_reactions:reaction',
+                'userid' => 'privacy:metadata:local_reactforum_userreactions:userid',
+                'post' => 'privacy:metadata:local_reactforum_userreactions:post',
+                'reaction' => 'privacy:metadata:local_reactforum_userreactions:reaction',
             ],
-            'privacy:metadata:local_reactforum_user_reactions'
+            'privacy:metadata:local_reactforum_userreactions'
         );
         return $collection;
     }
@@ -74,7 +74,7 @@ class provider implements
                    )
               JOIN {forum_discussions} d ON d.forum = f.id
               JOIN {forum_posts} p ON p.discussion = d.id
-              JOIN {local_reactforum_user_reactions} rr ON rr.post = p.id
+              JOIN {local_reactforum_userreactions} rr ON rr.post = p.id
              WHERE rr.userid = :userid
             SQL;
         $contextlist->add_from_sql($sql, ['contextlevel' => CONTEXT_MODULE, 'userid' => $userid]);
@@ -94,7 +94,7 @@ class provider implements
         }
         $sql = <<<SQL
             SELECT rr.userid
-              FROM {local_reactforum_user_reactions} rr
+              FROM {local_reactforum_userreactions} rr
               JOIN {forum_posts} p ON p.id = rr.post
               JOIN {forum_discussions} d ON d.id = p.discussion
               JOIN {forum} f ON f.id = d.forum
@@ -119,7 +119,7 @@ class provider implements
             }
             $sql = <<<SQL
                 SELECT rr.id, rr.post, rr.reaction, p.discussion, d.forum
-                  FROM {local_reactforum_user_reactions} rr
+                  FROM {local_reactforum_userreactions} rr
                   JOIN {forum_posts} p ON p.id = rr.post
                   JOIN {forum_discussions} d ON d.id = p.discussion
                   JOIN {forum} f ON f.id = d.forum
@@ -148,7 +148,7 @@ class provider implements
             return;
         }
         $sql = <<<SQL
-            DELETE FROM {local_reactforum_user_reactions}
+            DELETE FROM {local_reactforum_userreactions}
              WHERE post IN (
                    SELECT p.id
                      FROM {forum_posts} p
@@ -175,7 +175,7 @@ class provider implements
                 continue;
             }
             $sql = <<<SQL
-                DELETE FROM {local_reactforum_user_reactions}
+                DELETE FROM {local_reactforum_userreactions}
                  WHERE userid = :userid
                    AND post IN (
                        SELECT p.id
@@ -204,7 +204,7 @@ class provider implements
 
         [$insql, $inparams] = $DB->get_in_or_equal($userlist->get_userids(), SQL_PARAMS_NAMED, 'uid');
         $sql = <<<SQL
-            DELETE FROM {local_reactforum_user_reactions}
+            DELETE FROM {local_reactforum_userreactions}
              WHERE userid {$insql}
                AND post IN (
                    SELECT p.id
