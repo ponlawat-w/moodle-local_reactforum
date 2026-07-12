@@ -94,7 +94,7 @@ if ($discussion) {
     $PAGE->navbar->add($discussion->name, new \core\url('/mod/forum/discuss.php', ['d' => $discussion->id]));
 }
 
-local_reactforum_requirejsformanagereactions($forum->id, $discussion ? $discussion->id : null);
+local_reactforum_requirejsformanagereactions($forum->id, $discussion ? $discussion->id : null, $course->id);
 
 echo $OUTPUT->header();
 $form->display();
