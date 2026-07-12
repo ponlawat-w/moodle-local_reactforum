@@ -73,7 +73,7 @@ function local_reactforum_applytoform(
 }
 
 /**
- * Loads the CSS, JS strings, and AMD module required for the reaction management UI.
+ * Loads the JS strings and AMD module required for the reaction management UI.
  *
  * Shared by managereactions.php and the module settings form injection.
  *
@@ -86,7 +86,6 @@ function local_reactforum_requirejsformanagereactions(?int $forumid, ?int $discu
     global $PAGE;
     /** @var \moodle_page $PAGE */
     $PAGE;
-    $PAGE->requires->css('/local/reactforum/styles.css');
     $PAGE->requires->strings_for_js([
         'reactionstype_change_confirmation',
         'reactions_add',
@@ -667,7 +666,7 @@ function local_reactforum_pluginfile($course, $cm, $context, $filearea, $args, $
 }
 
 /**
- * Enqueues the CSS, JS strings, and AMD module needed to render reactions on a discuss.php page.
+ * Enqueues the JS strings and AMD module needed to render reactions on a discuss.php page.
  *
  * @return void
  */
@@ -675,7 +674,6 @@ function local_reactforum_initreactions() {
     global $PAGE;
     /** @var \moodle_page $PAGE */
     $PAGE;
-    $PAGE->requires->css('/local/reactforum/styles.css');
     $PAGE->requires->strings_for_js(['reactions'], 'local_reactforum');
     $PAGE->requires->js_call_amd('local_reactforum/reactions', 'init', [required_param('d', PARAM_INT)]);
 }
