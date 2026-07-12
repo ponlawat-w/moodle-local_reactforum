@@ -24,6 +24,10 @@
 
 namespace local_reactforum\external;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/../../lib.php');
+
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_value;
@@ -43,6 +47,9 @@ class upload_reaction_image extends external_api {
         return new external_function_parameters([
             'draftitemid' => new external_value(PARAM_INT, 'Draft item id of the uploaded file'),
             'filename' => new external_value(PARAM_FILE, 'Filename of the uploaded file'),
+            'forumid' => new external_value(PARAM_INT, 'Forum id the reaction image is configured for', VALUE_DEFAULT, 0),
+            'discussionid' => new external_value(PARAM_INT, 'Discussion id for discussion-level reactions', VALUE_DEFAULT, 0),
+            'courseid' => new external_value(PARAM_INT, 'Course id for a not-yet-created forum', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -51,18 +58,75 @@ class upload_reaction_image extends external_api {
      *
      * @param int $draftitemid
      * @param string $filename
+     * @param int $forumid
+     * @param int $discussionid
+     * @param int $courseid
      * @return int stored_file id
      */
-    public static function execute(int $draftitemid, string $filename): int {
-        global $USER;
+    public static function execute(
+        int $draftitemid,
+        string $filename,
+        int $forumid = 0,
+        int $discussionid = 0,
+        int $courseid = 0
+    ): int {
+        global $DB, $USER;
 
-        ['draftitemid' => $draftitemid, 'filename' => $filename] = self::validate_parameters(
+        [
+            'draftitemid' => $draftitemid,
+            'filename' => $filename,
+            'forumid' => $forumid,
+            'discussionid' => $discussionid,
+            'courseid' => $courseid,
+        ] = self::validate_parameters(
             self::execute_parameters(),
-            ['draftitemid' => $draftitemid, 'filename' => $filename]
+            [
+                'draftitemid' => $draftitemid,
+                'filename' => $filename,
+                'forumid' => $forumid,
+                'discussionid' => $discussionid,
+                'courseid' => $courseid,
+            ]
         );
 
-        $usercontext = \context_user::instance($USER->id);
-        self::validate_context($usercontext);
+        // Resolve the execution context and enforce the same permissions as managereactions.php:
+        // reaction images can only be uploaded by users allowed to configure reactions for the
+        // target forum/discussion (or to add activities to the course for a not-yet-created forum).
+        $discussion = $discussionid ? $DB->get_record('forum_discussions', ['id' => $discussionid], '*', MUST_EXIST) : null;
+        if ($discussion) {
+            $forumid = $discussion->forum;
+        }
+
+        if ($forumid) {
+            $forum = $DB->get_record('forum', ['id' => $forumid], '*', MUST_EXIST);
+            $course = get_course($forum->course);
+            $cm = get_coursemodule_from_instance('forum', $forum->id, $course->id, false, MUST_EXIST);
+            /** @var \context $context */
+            $context = \core\context\module::instance($cm->id);
+            self::validate_context($context);
+            if ($discussion) {
+                if (!local_reactforum_caneditdiscussion($discussion, $context)) {
+                    throw new \core\exception\moodle_exception(
+                        'nopermissions',
+                        'error',
+                        '',
+                        get_string('reactionsettings', 'local_reactforum')
+                    );
+                }
+            } else {
+                require_capability('local/reactforum:forumconfig', $context);
+            }
+        } else if ($courseid) {
+            // The forum is being created, so no module context exists yet.
+            /** @var \context $context */
+            $context = \core\context\course::instance($courseid);
+            self::validate_context($context);
+            require_capability('moodle/course:manageactivities', $context);
+        } else {
+            throw new \core\exception\moodle_exception('error_invalidparams', 'local_reactforum');
+        }
+
+        $usercontext = \core\context\user::instance($USER->id);
 
         $fs = get_file_storage();
 

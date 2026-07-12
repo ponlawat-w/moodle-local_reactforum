@@ -1,3 +1,18 @@
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Handles the reaction settings management UI.
  *
@@ -22,8 +37,11 @@ import $ from 'jquery';
  * Initialises the reaction management form.
  *
  * @param {string} currentreactionsjsonstr — JSON string of current reactions config
+ * @param {number} forumid — forum id the reactions are configured for (0 if not yet created)
+ * @param {number} discussionid — discussion id for discussion-level reactions (0 if forum-level)
+ * @param {number} courseid — course id, used when the forum does not exist yet
  */
-export const init = currentreactionsjsonstr => {
+export const init = (currentreactionsjsonstr, forumid = 0, discussionid = 0, courseid = 0) => {
     $(() => {
         let $maindiv = $('div#fgroup_id_reactions');
         let $area = $maindiv.find('div.felement');
@@ -172,7 +190,7 @@ export const init = currentreactionsjsonstr => {
 
                 Ajax.call([{
                     methodname: 'local_reactforum_upload_reaction_image',
-                    args: {draftitemid, filename},
+                    args: {draftitemid, filename, forumid, discussionid, courseid},
                 }])[0]
                 .then(tempfileid => {
                     if (editid === 0) {

@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_reactforum';
-$plugin->version = 2026041500;
+$plugin->version = 2026071200;
 $plugin->requires = 2024042200;
-$plugin->release = '3.0.0';
+$plugin->release = '3.0.1';
 $plugin->maturity = MATURITY_STABLE;
