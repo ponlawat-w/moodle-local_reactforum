@@ -73,19 +73,19 @@ function local_reactforum_applytoform(
 }
 
 /**
- * Loads the CSS, JS strings, and AMD module required for the reaction management UI.
+ * Loads the JS strings and AMD module required for the reaction management UI.
  *
  * Shared by managereactions.php and the module settings form injection.
  *
  * @param int|null $forumid
  * @param int|null $discussionid
+ * @param int|null $courseid course id, required when the forum does not exist yet
  * @return void
  */
-function local_reactforum_requirejsformanagereactions(?int $forumid, ?int $discussionid) {
+function local_reactforum_requirejsformanagereactions(?int $forumid, ?int $discussionid, ?int $courseid = null) {
     global $PAGE;
     /** @var \moodle_page $PAGE */
     $PAGE;
-    $PAGE->requires->css('/local/reactforum/styles.css');
     $PAGE->requires->strings_for_js([
         'reactionstype_change_confirmation',
         'reactions_add',
@@ -98,7 +98,12 @@ function local_reactforum_requirejsformanagereactions(?int $forumid, ?int $discu
         'description',
     ], 'local_reactforum');
     $reactionsdata = $forumid ? local_reactforum_getreactionsjson($forumid, $discussionid) : json_encode(null);
-    $PAGE->requires->js_call_amd('local_reactforum/managereactions', 'init', [$reactionsdata]);
+    $PAGE->requires->js_call_amd('local_reactforum/managereactions', 'init', [
+        $reactionsdata,
+        (int) $forumid,
+        (int) $discussionid,
+        (int) $courseid,
+    ]);
 }
 
 /**
@@ -281,6 +286,7 @@ function local_reactforum_processreactionsdata(
  * @return void
  */
 function local_reactforum_coursemodule_standard_elements(\moodleform_mod $form, \MoodleQuickForm $mform) {
+    global $COURSE;
     $add = optional_param('add', null, PARAM_TEXT);
     if (!is_null($add) && $add != 'forum') {
         return;
@@ -294,7 +300,7 @@ function local_reactforum_coursemodule_standard_elements(\moodleform_mod $form, 
 
     $mform->addElement('header', 'local_reactforum', get_string('reactionsettings', 'local_reactforum'));
     local_reactforum_applytoform($mform, $reactionsetting, true);
-    local_reactforum_requirejsformanagereactions($forumid, null);
+    local_reactforum_requirejsformanagereactions($forumid, null, $COURSE->id);
 }
 
 /**
@@ -660,7 +666,7 @@ function local_reactforum_pluginfile($course, $cm, $context, $filearea, $args, $
 }
 
 /**
- * Enqueues the CSS, JS strings, and AMD module needed to render reactions on a discuss.php page.
+ * Enqueues the JS strings and AMD module needed to render reactions on a discuss.php page.
  *
  * @return void
  */
@@ -668,7 +674,6 @@ function local_reactforum_initreactions() {
     global $PAGE;
     /** @var \moodle_page $PAGE */
     $PAGE;
-    $PAGE->requires->css('/local/reactforum/styles.css');
     $PAGE->requires->strings_for_js(['reactions'], 'local_reactforum');
     $PAGE->requires->js_call_amd('local_reactforum/reactions', 'init', [required_param('d', PARAM_INT)]);
 }
